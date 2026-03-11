@@ -102,8 +102,7 @@ interface MetaAction {
 
 interface MetaInsightRow {
   spend: string;
-  actions?: MetaAction[];        // total actions (used for lead/optins)
-  unique_actions?: MetaAction[]; // unique actions (used for landing_page_view/views)
+  unique_actions?: MetaAction[]; // unique actions — used for landing_page_view (views)
 }
 
 function getActionVal(actions: MetaAction[] | undefined, type: string): number {
@@ -117,7 +116,7 @@ async function fetchAccountInsights(
   until: string,
 ): Promise<MetaInsightRow | null> {
   const params = new URLSearchParams({
-    fields: "spend,actions,unique_actions", // unique_actions for views, actions for leads
+    fields: "spend,unique_actions", // unique landing_page_view for views; optins come from Sheet1
     time_range: JSON.stringify({ since, until }),
     access_token: META_TOKEN!,
   });
@@ -135,25 +134,25 @@ async function fetchAccountInsights(
   }
 }
 
-/** Aggregates spend + landing_page_view + lead from both ADS accounts for a date range. */
+/**
+ * Fetches spend + unique landing_page_view from both ADS accounts (AIA Ads Acc + AIA MY).
+ * Training 2 (KOL account) is intentionally excluded.
+ * Optins are NOT fetched here — they come from Sheet1 (Google Sheets) via Apps Script.
+ */
 async function fetchMetaStats(since: string, until: string) {
   const rows = await Promise.all(
     ADS_ACCOUNT_IDS.map((id) => fetchAccountInsights(id, since, until)),
   );
 
-  let spend = 0, views = 0, optins = 0;
+  let spend = 0, views = 0;
   for (const row of rows) {
     if (!row) continue;
-    spend  += parseFloat(row.spend || "0");
-    views  += getActionVal(row.unique_actions, "landing_page_view"); // unique views
-    optins += getActionVal(row.actions, "lead");                     // total leads
+    spend += parseFloat(row.spend || "0");
+    views += getActionVal(row.unique_actions, "landing_page_view"); // unique views only
   }
 
   const spentWithTax = spend * TAX_MULTIPLIER;
-  const cpl          = optins > 0 ? spend / optins : 0;
-  const cplWithTax   = optins > 0 ? spentWithTax / optins : 0;
-
-  return { spentWithoutTax: spend, spentWithTax, views, optins, cpl, cplWithTax };
+  return { spentWithoutTax: spend, spentWithTax, views };
 }
 
 // ─── Route handler ───────────────────────────────────────────────────────────
@@ -191,23 +190,37 @@ export async function GET() {
     let yesterdaySection: DashboardData["yesterday"];
 
     if (META_TOKEN) {
-      // Pull live data from Meta Ads API for both ADS accounts
+      // Spend + views from Meta Ads API (AIA Ads Acc + AIA MY only, Training 2 excluded)
       const [weeklyMeta, ydMeta] = await Promise.all([
         fetchMetaStats(lastThursdayStr, todayStr),
         fetchMetaStats(yesterdayStr, yesterdayStr),
       ]);
 
+      // Optins come from Sheet1 (Google Sheets) via Apps Script — non-green rows per date range
+      const wOptins = (appsData.optinsWeekly    as number) ?? 0;
+      const yOptins = (appsData.optinsYesterday as number) ?? 0;
+
       weekly = {
-        dateRange: `${toDDMM(lastThursday)} ${DAY_NAMES[lastThursday.getUTCDay()]} - ${toDDMM(today)} ${DAY_NAMES[today.getUTCDay()]} (AI 网络自由创业)`,
-        ...weeklyMeta,
+        dateRange:       `${toDDMM(lastThursday)} ${DAY_NAMES[lastThursday.getUTCDay()]} - ${toDDMM(today)} ${DAY_NAMES[today.getUTCDay()]} (AI 网络自由创业)`,
+        spentWithoutTax: weeklyMeta.spentWithoutTax,
+        spentWithTax:    weeklyMeta.spentWithTax,
+        views:           weeklyMeta.views,
+        optins:          wOptins,
+        cpl:             wOptins > 0 ? weeklyMeta.spentWithoutTax / wOptins : 0,
+        cplWithTax:      wOptins > 0 ? weeklyMeta.spentWithTax    / wOptins : 0,
       };
 
       yesterdaySection = {
-        date: `${yesterday.getUTCDate()} ${MONTH_ABBR[yesterday.getUTCMonth()]} (${DAY_ABBR[yesterday.getUTCDay()]})`,
-        ...ydMeta,
+        date:            `${yesterday.getUTCDate()} ${MONTH_ABBR[yesterday.getUTCMonth()]} (${DAY_ABBR[yesterday.getUTCDay()]})`,
+        spentWithoutTax: ydMeta.spentWithoutTax,
+        spentWithTax:    ydMeta.spentWithTax,
+        views:           ydMeta.views,
+        optins:          yOptins,
+        cpl:             yOptins > 0 ? ydMeta.spentWithoutTax / yOptins : 0,
+        cplWithTax:      yOptins > 0 ? ydMeta.spentWithTax    / yOptins : 0,
       };
     } else {
-      // Fall back to Apps Script (reads from Daily Reporting sheet)
+      // Fall back to Apps Script (spend from Daily Reporting, optins already from Sheet1)
       weekly           = appsData.weekly;
       yesterdaySection = appsData.yesterday;
     }

@@ -20,9 +20,9 @@
 var CONFIG = {
   COUNT1_SHEET: 'COUNT1',
   DAILY_REPORTING_SHEET: 'Daily Reporting',
+  ADS_SHEET: 'Sheet1',   // Ads contact list — col A = Date, green rows = duplicates (excluded)
   WEBINAR_NAME: 'AI 网络自由创业',
   // Column indices in Daily Reporting (0-based)
-  // A=0, B=1, C=2, D=3, E=4, F=5, G=6(hidden), H=7, I=8, J=9, K=10, L=11, M=12, N=13
   COL_DATE: 1,          // B: Date
   COL_SPENT_NO_TAX: 7,  // H: Total Ad Spent (Without Tax)
   COL_SPENT_WITH_TAX: 8, // I: Total Ad Spent (With Tax)
@@ -50,8 +50,9 @@ function doGet(e) {
 
 function getDashboardData() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var count1 = ss.getSheetByName(CONFIG.COUNT1_SHEET);
+  var count1     = ss.getSheetByName(CONFIG.COUNT1_SHEET);
   var dailySheet = ss.getSheetByName(CONFIG.DAILY_REPORTING_SHEET);
+  var adsSheet   = ss.getSheetByName(CONFIG.ADS_SHEET);
 
   if (!count1) throw new Error('COUNT1 sheet not found');
   if (!dailySheet) throw new Error('Daily Reporting sheet not found');
@@ -92,13 +93,18 @@ function getDashboardData() {
   var webinarDateStr = Utilities.formatDate(today, Session.getScriptTimeZone(), 'MMM dd').toUpperCase()
     + ' (' + Utilities.formatDate(today, Session.getScriptTimeZone(), 'EEE').toUpperCase() + ')';
 
-  // ---- Ads spending data from Daily Reporting ----
+  // ---- Date range for weekly / yesterday ----
   var lastThursday = getLastThursday(today);
   var yesterday    = new Date(today); yesterday.setDate(today.getDate() - 1);
 
+  // ---- Ads spending data from Daily Reporting (used as fallback when META_ADS_ACCESS_TOKEN not set) ----
   var allRows = dailySheet.getDataRange().getValues();
   var weeklyStats    = aggregateRows(allRows, lastThursday, today);
   var yesterdayStats = aggregateRows(allRows, yesterday,   yesterday);
+
+  // ---- Optin counts from Sheet1 (non-green rows = valid new registrants, no duplicates) ----
+  var optinsWeekly    = adsSheet ? countOptins(adsSheet, lastThursday, today)    : 0;
+  var optinsYesterday = adsSheet ? countOptins(adsSheet, yesterday,    yesterday) : 0;
 
   // Weekly date range label
   var thurStr = Utilities.formatDate(lastThursday, Session.getScriptTimeZone(), 'dd/MM');
@@ -124,23 +130,27 @@ function getDashboardData() {
     kolTotal:         kolTotal,
     kolTotalChange:   kolTotalChange,
     kols:             kols,
+    // optinsWeekly / optinsYesterday: counted from Sheet1 (green rows = duplicates, excluded)
+    // Used by route.ts to override Meta Ads lead count with actual sheet registrant count
+    optinsWeekly:    optinsWeekly,
+    optinsYesterday: optinsYesterday,
     weekly: {
       dateRange:       weeklyDateRange,
       spentWithoutTax: weeklyStats.spentWithoutTax,
       spentWithTax:    weeklyStats.spentWithTax,
       views:           weeklyStats.views,
-      optins:          weeklyStats.optins,
-      cpl:             weeklyStats.cpl,
-      cplWithTax:      weeklyStats.cplWithTax
+      optins:          optinsWeekly,           // Sheet1 count (non-green)
+      cpl:             weeklyStats.spentWithoutTax > 0 && optinsWeekly > 0 ? weeklyStats.spentWithoutTax / optinsWeekly : 0,
+      cplWithTax:      weeklyStats.spentWithTax > 0   && optinsWeekly > 0 ? weeklyStats.spentWithTax    / optinsWeekly : 0
     },
     yesterday: {
       date:            yesterdayStr,
       spentWithoutTax: yesterdayStats.spentWithoutTax,
       spentWithTax:    yesterdayStats.spentWithTax,
       views:           yesterdayStats.views,
-      optins:          yesterdayStats.optins,
-      cpl:             yesterdayStats.cpl,
-      cplWithTax:      yesterdayStats.cplWithTax
+      optins:          optinsYesterday,        // Sheet1 count (non-green)
+      cpl:             yesterdayStats.spentWithoutTax > 0 && optinsYesterday > 0 ? yesterdayStats.spentWithoutTax / optinsYesterday : 0,
+      cplWithTax:      yesterdayStats.spentWithTax > 0    && optinsYesterday > 0 ? yesterdayStats.spentWithTax    / optinsYesterday : 0
     },
     countdownDays: countdownDays,
     lastUpdated:   new Date().toISOString()
@@ -194,6 +204,69 @@ function getNextWednesday(today) {
   var daysToWed = (3 - dow + 7) % 7;
   d.setDate(d.getDate() + daysToWed);
   return d;
+}
+
+/**
+ * Count non-green rows in Sheet1 (Ads contact list) within [startDate, endDate].
+ * Column A = registration date/time.
+ * Green-highlighted rows = duplicates from a previous webinar session → excluded.
+ *
+ * Performance: reads only column A dates first to find the matching row window,
+ * then reads backgrounds only for those rows (avoids scanning all 128K+ rows).
+ */
+function countOptins(sheet1, startDate, endDate) {
+  var lastRow = sheet1.getLastRow();
+  if (lastRow <= 1) return 0; // empty or header only
+
+  var start = new Date(startDate); start.setHours(0, 0, 0, 0);
+  var end   = new Date(endDate);   end.setHours(23, 59, 59, 999);
+
+  var dataRows = lastRow - 1; // row 1 is header
+  // Read just column A (dates) for all data rows
+  var dateValues = sheet1.getRange(2, 1, dataRows, 1).getValues();
+
+  // Find the first and last row index (0-based within dateValues) that fall in range
+  var firstIdx = -1, lastIdx = -1;
+  for (var i = 0; i < dateValues.length; i++) {
+    var d = dateValues[i][0];
+    if (!d || !(d instanceof Date)) continue;
+    if (d >= start && d <= end) {
+      if (firstIdx === -1) firstIdx = i;
+      lastIdx = i;
+    }
+  }
+  if (firstIdx === -1) return 0; // no rows in range
+
+  // Read backgrounds only for the matching window
+  var windowSize = lastIdx - firstIdx + 1;
+  var sheetRow   = firstIdx + 2; // +1 for 0-to-1 index, +1 for header row
+  var backgrounds = sheet1.getRange(sheetRow, 1, windowSize, 1).getBackgrounds();
+
+  var count = 0;
+  for (var j = 0; j < windowSize; j++) {
+    var rowDate = dateValues[firstIdx + j][0];
+    if (!rowDate || !(rowDate instanceof Date)) continue;
+    if (rowDate < start || rowDate > end) continue;
+    if (!isGreenHighlight(backgrounds[j][0])) {
+      count++;
+    }
+  }
+  return count;
+}
+
+/**
+ * Returns true if the hex color is a shade of green (duplicate marker).
+ * Green rows in Sheet1 = registrants who signed up in a previous webinar session.
+ */
+function isGreenHighlight(hexColor) {
+  if (!hexColor || hexColor === '#ffffff' || hexColor === 'white' || hexColor === null) return false;
+  var hex = hexColor.replace('#', '');
+  if (hex.length !== 6) return false;
+  var r = parseInt(hex.substring(0, 2), 16);
+  var g = parseInt(hex.substring(2, 4), 16);
+  var b = parseInt(hex.substring(4, 6), 16);
+  // Green dominates: green channel must be noticeably higher than red and blue
+  return g > r && g > b && g > 80;
 }
 
 function safeNum(val) {
