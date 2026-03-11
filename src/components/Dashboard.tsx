@@ -68,12 +68,12 @@ export default function Dashboard() {
       `*${d.weekly.dateRange}*`,
       `Weekly Ads Spent: RM ${fmt(d.weekly.spentWithoutTax)} + tax = RM${fmt(d.weekly.spentWithTax)}`,
       `Number of Views of Landing Page: ${d.weekly.views.toLocaleString()}`,
-      `Number of Optins: ${d.weekly.optins.toLocaleString()}`,
+      `Number of Leads: ${d.weekly.optins.toLocaleString()}`,
       `CPL: RM${fmt(d.weekly.cpl)} (with tax RM${fmt(d.weekly.cplWithTax)})`,
       ``,
       `Yesterday Ads Spent: RM ${fmt(d.yesterday.spentWithoutTax)} + tax = RM${fmt(d.yesterday.spentWithTax)}`,
       `Number of Views of Landing Page: ${d.yesterday.views.toLocaleString()}`,
-      `Number of Optins: ${d.yesterday.optins.toLocaleString()}`,
+      `Number of Leads: ${d.yesterday.optins.toLocaleString()}`,
       `CPL: RM${fmt(d.yesterday.cpl)} (with tax RM${fmt(d.yesterday.cplWithTax)})`,
     ];
     return lines.join("\n");
@@ -299,7 +299,7 @@ export default function Dashboard() {
             value={data.weekly.views.toLocaleString()}
           />
           <StatBox
-            label="Optins"
+            label="Leads"
             value={data.weekly.optins.toLocaleString()}
           />
           <StatBox
@@ -325,7 +325,7 @@ export default function Dashboard() {
             value={data.yesterday.views.toLocaleString()}
           />
           <StatBox
-            label="Optins"
+            label="Leads"
             value={data.yesterday.optins.toLocaleString()}
           />
           <StatBox
@@ -339,7 +339,7 @@ export default function Dashboard() {
 
       <p className="text-center text-xs text-[#484f58] pb-4">
         {dataSource === "meta-ads"
-          ? "Spend/Views/Optins from Meta Ads API · Registrations from Google Sheets"
+          ? "Spend/Views from Meta Ads API · Leads from Google Sheets (Sheet1)"
           : dataSource === "mock"
           ? "Mock data (dev mode)"
           : "Data from Google Sheets"}
