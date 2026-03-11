@@ -95,18 +95,9 @@ const DAY_ABBR   = ["SUN","MON","TUE","WED","THU","FRI","SAT"];
 
 // ─── Meta Ads helpers ────────────────────────────────────────────────────────
 
-interface MetaAction {
-  action_type: string;
-  value: string;
-}
-
 interface MetaInsightRow {
   spend: string;
-  unique_actions?: MetaAction[]; // unique actions — used for landing_page_view (views)
-}
-
-function getActionVal(actions: MetaAction[] | undefined, type: string): number {
-  return parseFloat(actions?.find((a) => a.action_type === type)?.value ?? "0") || 0;
+  unique_clicks?: string; // unique clicks — used for views
 }
 
 /** Fetches insights for one Meta Ads account for the given date range. */
@@ -116,7 +107,7 @@ async function fetchAccountInsights(
   until: string,
 ): Promise<MetaInsightRow | null> {
   const params = new URLSearchParams({
-    fields: "spend,unique_actions", // unique landing_page_view for views; optins come from Sheet1
+    fields: "spend,unique_clicks", // unique clicks for views; optins come from Sheet1
     time_range: JSON.stringify({ since, until }),
     access_token: META_TOKEN!,
   });
@@ -135,9 +126,9 @@ async function fetchAccountInsights(
 }
 
 /**
- * Fetches spend + unique landing_page_view from both ADS accounts (AIA Ads Acc + AIA MY).
+ * Fetches spend + unique_clicks from both ADS accounts (AIA Ads Acc + AIA MY).
  * Training 2 (KOL account) is intentionally excluded.
- * Optins are NOT fetched here — they come from Sheet1 (Google Sheets) via Apps Script.
+ * Leads are NOT fetched here — they come from Sheet1 (Google Sheets) via Apps Script.
  */
 async function fetchMetaStats(since: string, until: string) {
   const rows = await Promise.all(
@@ -148,7 +139,7 @@ async function fetchMetaStats(since: string, until: string) {
   for (const row of rows) {
     if (!row) continue;
     spend += parseFloat(row.spend || "0");
-    views += getActionVal(row.unique_actions, "landing_page_view"); // unique views only
+    views += parseInt(row.unique_clicks ?? "0", 10);
   }
 
   const spentWithTax = spend * TAX_MULTIPLIER;
@@ -196,9 +187,9 @@ export async function GET() {
         fetchMetaStats(yesterdayStr, yesterdayStr),
       ]);
 
-      // Optins come from Sheet1 (Google Sheets) via Apps Script — non-green rows per date range
-      const wOptins = (appsData.optinsWeekly    as number) ?? 0;
-      const yOptins = (appsData.optinsYesterday as number) ?? 0;
+      // Leads from Sheet1 (non-green rows); fall back to Daily Reporting col L if Sheet1 count is 0
+      const wOptins = (appsData.optinsWeekly    as number) || (appsData.weekly?.optins    as number) || 0;
+      const yOptins = (appsData.optinsYesterday as number) || (appsData.yesterday?.optins as number) || 0;
 
       weekly = {
         dateRange:       `${toDDMM(lastThursday)} ${DAY_NAMES[lastThursday.getUTCDay()]} - ${toDDMM(today)} ${DAY_NAMES[today.getUTCDay()]} (AI 网络自由创业)`,
