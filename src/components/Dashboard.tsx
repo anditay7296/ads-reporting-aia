@@ -167,6 +167,19 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Setup banner */}
+      {data._setupNeeded && (
+        <div className="rounded-lg border border-yellow-600/50 bg-yellow-900/20 px-4 py-3 text-sm text-yellow-300">
+          <p className="font-semibold mb-1">⚙️ Setup required — showing demo data</p>
+          <p className="text-yellow-400/80 text-xs leading-relaxed">
+            1. Deploy <code className="bg-yellow-900/40 px-1 rounded">Code.gs</code> as a Google Apps Script web app<br />
+            2. Add <code className="bg-yellow-900/40 px-1 rounded">APPS_SCRIPT_URL</code> in Vercel → Settings → Environment Variables<br />
+            3. Add <code className="bg-yellow-900/40 px-1 rounded">META_ADS_ACCESS_TOKEN</code> (optional, for live ad spend)<br />
+            4. Redeploy
+          </p>
+        </div>
+      )}
+
       {/* Auto-refresh status */}
       <div className="flex items-center justify-between text-xs text-[#8b949e]">
         <span>

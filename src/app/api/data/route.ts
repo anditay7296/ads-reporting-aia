@@ -159,14 +159,11 @@ async function fetchMetaStats(since: string, until: string) {
 // ─── Route handler ───────────────────────────────────────────────────────────
 
 export async function GET() {
-  // Dev fallback when Apps Script URL is not configured
+  // Show mock data (with setup banner) when Apps Script URL is not configured
   if (!APPS_SCRIPT_URL) {
-    if (process.env.NODE_ENV === "development") {
-      return NextResponse.json(MOCK_DATA, { headers: { "X-Data-Source": "mock" } });
-    }
     return NextResponse.json(
-      { error: "APPS_SCRIPT_URL environment variable is not set" },
-      { status: 500 },
+      { ...MOCK_DATA, _setupNeeded: true },
+      { headers: { "X-Data-Source": "mock" } },
     );
   }
 

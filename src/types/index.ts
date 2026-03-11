@@ -42,4 +42,5 @@ export interface DashboardData {
   };
   countdownDays: number;
   lastUpdated: string;
+  _setupNeeded?: boolean; // true when APPS_SCRIPT_URL is not yet configured
 }
