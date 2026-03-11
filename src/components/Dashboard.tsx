@@ -5,8 +5,6 @@ import { DashboardData } from "@/types";
 import KOLCard from "./KOLCard";
 import ChangeTag from "./ChangeTag";
 
-const REFRESH_INTERVAL = 5 * 60; // 5 minutes in seconds
-
 function fmt(n: number, decimals = 2) {
   return n.toLocaleString("en-MY", {
     minimumFractionDigits: decimals,
@@ -18,7 +16,6 @@ export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [countdown, setCountdown] = useState(REFRESH_INTERVAL);
   const [copied, setCopied] = useState(false);
   const [dataSource, setDataSource] = useState<string>("…");
 
@@ -31,7 +28,6 @@ export default function Dashboard() {
       if (json.error) throw new Error(json.error);
       setData(json);
       setDataSource(res.headers.get("X-Data-Source") ?? "live");
-      setCountdown(REFRESH_INTERVAL);
     } catch (e) {
       setError(String(e));
     } finally {
@@ -42,20 +38,6 @@ export default function Dashboard() {
   // Initial fetch
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
-
-  // Auto-refresh countdown
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCountdown((c) => {
-        if (c <= 1) {
-          fetchData();
-          return REFRESH_INTERVAL;
-        }
-        return c - 1;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
   }, [fetchData]);
 
   function buildWhatsAppText(): string {
@@ -180,8 +162,8 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Auto-refresh status */}
-      <div className="flex items-center justify-between text-xs text-[#8b949e]">
+      {/* Last updated */}
+      <div className="text-xs text-[#8b949e]">
         <span>
           Last updated:{" "}
           {new Date(data.lastUpdated).toLocaleTimeString("en-MY", {
@@ -189,7 +171,6 @@ export default function Dashboard() {
             minute: "2-digit",
           })}
         </span>
-        <span>Auto-refresh in {Math.floor(countdown / 60)}:{String(countdown % 60).padStart(2, "0")}</span>
       </div>
 
       {/* Total Registrants */}
@@ -361,8 +342,7 @@ export default function Dashboard() {
           ? "Spend/Views/Optins from Meta Ads API · Registrations from Google Sheets"
           : dataSource === "mock"
           ? "Mock data (dev mode)"
-          : "Data from Google Sheets"}{" "}
-        · Auto-refresh every 5 min
+          : "Data from Google Sheets"}
       </p>
     </div>
   );
