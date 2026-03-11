@@ -67,12 +67,12 @@ export default function Dashboard() {
       ``,
       `*${d.weekly.dateRange}*`,
       `Weekly Ads Spent: RM ${fmt(d.weekly.spentWithoutTax)} + tax = RM${fmt(d.weekly.spentWithTax)}`,
-      `Number of Unique Clicks: ${d.weekly.views.toLocaleString()}`,
+      `Landing Page Views: ${d.weekly.views.toLocaleString()}`,
       `Number of Leads: ${d.weekly.optins.toLocaleString()}`,
       `CPL: RM${fmt(d.weekly.cpl)} (with tax RM${fmt(d.weekly.cplWithTax)})`,
       ``,
       `Yesterday Ads Spent: RM ${fmt(d.yesterday.spentWithoutTax)} + tax = RM${fmt(d.yesterday.spentWithTax)}`,
-      `Number of Unique Clicks: ${d.yesterday.views.toLocaleString()}`,
+      `Landing Page Views: ${d.yesterday.views.toLocaleString()}`,
       `Number of Leads: ${d.yesterday.optins.toLocaleString()}`,
       `CPL: RM${fmt(d.yesterday.cpl)} (with tax RM${fmt(d.yesterday.cplWithTax)})`,
     ];
@@ -295,7 +295,7 @@ export default function Dashboard() {
             sub={`w/ tax RM ${fmt(data.weekly.spentWithTax)}`}
           />
           <StatBox
-            label="Unique Clicks"
+            label="Landing Page Views"
             value={data.weekly.views.toLocaleString()}
           />
           <StatBox
@@ -321,7 +321,7 @@ export default function Dashboard() {
             sub={`w/ tax RM ${fmt(data.yesterday.spentWithTax)}`}
           />
           <StatBox
-            label="Unique Clicks"
+            label="Landing Page Views"
             value={data.yesterday.views.toLocaleString()}
           />
           <StatBox
@@ -339,7 +339,7 @@ export default function Dashboard() {
 
       <p className="text-center text-xs text-[#484f58] pb-4">
         {dataSource === "meta-ads"
-          ? "Spend/Unique Clicks from Meta Ads API · Leads from Google Sheets (Sheet1)"
+          ? "Spend/Landing Page Views from Meta Ads API · Leads from Google Sheets (Sheet1)"
           : dataSource === "mock"
           ? "Mock data (dev mode)"
           : "Data from Google Sheets"}

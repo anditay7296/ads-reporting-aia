@@ -95,9 +95,14 @@ const DAY_ABBR   = ["SUN","MON","TUE","WED","THU","FRI","SAT"];
 
 // ─── Meta Ads helpers ────────────────────────────────────────────────────────
 
+interface MetaAction {
+  action_type: string;
+  value: string;
+}
+
 interface MetaInsightRow {
   spend: string;
-  unique_clicks?: string; // unique clicks — used for views
+  actions?: MetaAction[]; // used for landing_page_view
 }
 
 /** Fetches insights for one Meta Ads account for the given date range. */
@@ -107,7 +112,7 @@ async function fetchAccountInsights(
   until: string,
 ): Promise<MetaInsightRow | null> {
   const params = new URLSearchParams({
-    fields: "spend,unique_clicks", // unique clicks for views; optins come from Sheet1
+    fields: "spend,actions", // actions[landing_page_view] for views; optins come from Sheet1
     time_range: JSON.stringify({ since, until }),
     access_token: META_TOKEN!,
   });
@@ -126,7 +131,7 @@ async function fetchAccountInsights(
 }
 
 /**
- * Fetches spend + unique_clicks from both ADS accounts (AIA Ads Acc + AIA MY).
+ * Fetches spend + landing_page_view from both ADS accounts (AIA Ads Acc + AIA MY).
  * Training 2 (KOL account) is intentionally excluded.
  * Leads are NOT fetched here — they come from Sheet1 (Google Sheets) via Apps Script.
  */
@@ -139,7 +144,8 @@ async function fetchMetaStats(since: string, until: string) {
   for (const row of rows) {
     if (!row) continue;
     spend += parseFloat(row.spend || "0");
-    views += parseInt(row.unique_clicks ?? "0", 10);
+    const lpv = row.actions?.find((a) => a.action_type === "landing_page_view");
+    views += lpv ? parseInt(lpv.value, 10) : 0;
   }
 
   const spentWithTax = spend * TAX_MULTIPLIER;
