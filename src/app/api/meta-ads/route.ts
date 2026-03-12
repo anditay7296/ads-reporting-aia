@@ -47,6 +47,7 @@ function parseCreative(adName: string): { adType: string; creative: string } {
 
 async function fetchInsights(
   params: Record<string, string>,
+  maxPages = 6,
 ): Promise<RawInsightRow[]> {
   const baseParams = new URLSearchParams({
     fields:
@@ -62,8 +63,11 @@ async function fetchInsights(
   let pages = 0;
   let hasMore = true;
 
-  while (hasMore && pages < 25) {
-    const res: Response = await fetch(nextUrl, { next: { revalidate: 1800 } });
+  while (hasMore && pages < maxPages) {
+    const res: Response = await fetch(nextUrl, {
+      next: { revalidate: 1800 },
+      signal: AbortSignal.timeout(8000), // 8s per page
+    });
     if (!res.ok) {
       console.warn(`Meta Ads insights error: ${res.status}`);
       break;
@@ -238,10 +242,9 @@ export async function GET() {
   try {
     const { since, until } = getLastWebinarPeriod();
 
-    const [alltimeRows, webinarRows] = await Promise.all([
-      fetchInsights({ date_preset: "maximum" }),
-      fetchInsights({ since, until }),
-    ]);
+    // Fetch sequentially: all-time capped at 6 pages (3000 ads), webinar unbounded
+    const alltimeRows = await fetchInsights({ date_preset: "maximum" }, 6);
+    const webinarRows = await fetchInsights({ since, until }, 25);
 
     const alltime = groupByNo(alltimeRows);
     const webinar = groupByNo(webinarRows);
