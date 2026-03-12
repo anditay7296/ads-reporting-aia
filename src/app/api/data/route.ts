@@ -10,7 +10,7 @@ const META_BASE = "https://graph.facebook.com/v19.0";
 const TAX_MULTIPLIER = 1.1669537; // amount * 1.08 + amount * 0.0869537037037037
 
 const CACHE_SECONDS = 300; // 5 minutes
-export const revalidate = CACHE_SECONDS;
+export const dynamic = "force-dynamic"; // skip build-time pre-rendering
 
 // ─── Mock data (dev fallback when no APPS_SCRIPT_URL) ───────────────────────
 const MOCK_DATA: DashboardData = {

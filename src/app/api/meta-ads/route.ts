@@ -6,7 +6,7 @@ const META_TOKEN = process.env.META_ADS_ACCESS_TOKEN;
 const AD_ACCOUNT = "act_555700366717773";
 const META_BASE = "https://graph.facebook.com/v21.0";
 
-export const revalidate = 1800; // 30 minutes
+export const dynamic = "force-dynamic"; // skip build-time pre-rendering
 
 // ─── Raw API types ────────────────────────────────────────────────────────────
 
