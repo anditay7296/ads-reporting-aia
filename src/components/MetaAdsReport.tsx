@@ -310,45 +310,6 @@ export default function MetaAdsReport() {
         {/* Data sections */}
         {data && (
           <>
-            {/* ── Account Summary ── */}
-            <div className="card p-5">
-              <SectionHeader>📊 Account Summary (All Time)</SectionHeader>
-              <StatGrid
-                items={[
-                  { label: "Total Spend", value: fmtRM(data.accountSummary.totalSpend), highlight: true },
-                  { label: "Total Leads", value: fmtNum(data.accountSummary.totalLeads) },
-                  { label: "Avg CPL", value: fmtRM(data.accountSummary.avgCpl) },
-                  { label: "Total Reach", value: fmtNum(data.accountSummary.totalReach) },
-                  { label: "Total Clicks", value: fmtNum(data.accountSummary.totalClicks) },
-                  { label: "Impressions", value: fmtNum(data.accountSummary.totalImpressions) },
-                  { label: "Purchases", value: fmtNum(data.accountSummary.totalPurchases) },
-                  { label: "Avg ROAS", value: fmtRoas(data.accountSummary.avgRoas) },
-                ]}
-              />
-            </div>
-
-            {/* ── Top 10 by Spend ── */}
-            <div className="card p-5">
-              <SectionHeader>🏆 Top 10 Ads by Spend</SectionHeader>
-              <Top10BySpend rows={data.topBySpend} />
-            </div>
-
-            {/* ── Top 10 by Leads ── */}
-            <div className="card p-5">
-              <SectionHeader>🎯 Top 10 Ads by Leads</SectionHeader>
-              <Top10ByLeads rows={data.topByLeads} />
-            </div>
-
-            {/* ── Top 10 by ROAS ── */}
-            <div className="card p-5">
-              <SectionHeader>💰 Top 10 Ads by ROAS</SectionHeader>
-              {data.topByRoas.length === 0 ? (
-                <p className="text-[#8b949e] text-sm">No purchase data available</p>
-              ) : (
-                <Top10ByRoas rows={data.topByRoas} />
-              )}
-            </div>
-
             {/* ── Last Webinar ── */}
             <div className="space-y-4">
               <div className="flex items-center gap-3">
@@ -393,6 +354,45 @@ export default function MetaAdsReport() {
                   <Top10ByRoas rows={data.lastWebinar.topByRoas} />
                 )}
               </div>
+            </div>
+
+            {/* ── Account Summary (All Time) ── */}
+            <div className="card p-5">
+              <SectionHeader>📊 Account Summary (All Time)</SectionHeader>
+              <StatGrid
+                items={[
+                  { label: "Total Spend", value: fmtRM(data.accountSummary.totalSpend), highlight: true },
+                  { label: "Total Leads", value: fmtNum(data.accountSummary.totalLeads) },
+                  { label: "Avg CPL", value: fmtRM(data.accountSummary.avgCpl) },
+                  { label: "Total Reach", value: fmtNum(data.accountSummary.totalReach) },
+                  { label: "Total Clicks", value: fmtNum(data.accountSummary.totalClicks) },
+                  { label: "Impressions", value: fmtNum(data.accountSummary.totalImpressions) },
+                  { label: "Purchases", value: fmtNum(data.accountSummary.totalPurchases) },
+                  { label: "Avg ROAS", value: fmtRoas(data.accountSummary.avgRoas) },
+                ]}
+              />
+            </div>
+
+            {/* ── Top 10 by Spend ── */}
+            <div className="card p-5">
+              <SectionHeader>🏆 Top 10 Ads by Spend</SectionHeader>
+              <Top10BySpend rows={data.topBySpend} />
+            </div>
+
+            {/* ── Top 10 by Leads ── */}
+            <div className="card p-5">
+              <SectionHeader>🎯 Top 10 Ads by Leads</SectionHeader>
+              <Top10ByLeads rows={data.topByLeads} />
+            </div>
+
+            {/* ── Top 10 by ROAS ── */}
+            <div className="card p-5">
+              <SectionHeader>💰 Top 10 Ads by ROAS</SectionHeader>
+              {data.topByRoas.length === 0 ? (
+                <p className="text-[#8b949e] text-sm">No purchase data available</p>
+              ) : (
+                <Top10ByRoas rows={data.topByRoas} />
+              )}
             </div>
           </>
         )}
