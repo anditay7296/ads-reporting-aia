@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { AdRow, MetaAdsData } from "@/types";
 
 const META_TOKEN = process.env.META_ADS_ACCESS_TOKEN;
 // Only AIA Ads Acc for ad-level reporting (matches sync_meta_to_sheets.py)
@@ -7,7 +8,7 @@ const META_BASE = "https://graph.facebook.com/v21.0";
 
 export const revalidate = 1800; // 30 minutes
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Raw API types ────────────────────────────────────────────────────────────
 
 interface RawInsightRow {
   ad_id: string;
@@ -21,57 +22,6 @@ interface RawInsightRow {
   actions?: { action_type: string; value: string }[];
   video_thruplay_watched_actions?: { action_type: string; value: string }[];
   purchase_roas?: { action_type: string; value: string }[];
-}
-
-export interface AdRow {
-  no: string;
-  creative: string;
-  adType: string;
-  spend: number;
-  leads: number;
-  purchases: number;
-  views: number;
-  cpl: number;
-  roas: number;
-  ctr: number;
-  cpc: number;
-  impressions: number;
-  clicks: number;
-  reach: number;
-}
-
-export interface MetaAdsData {
-  lastUpdated: string;
-  accountSummary: {
-    totalSpend: number;
-    totalLeads: number;
-    totalImpressions: number;
-    totalClicks: number;
-    totalReach: number;
-    totalPurchases: number;
-    avgCpl: number;
-    avgCtr: number;
-    avgCpc: number;
-    avgRoas: number;
-  };
-  topBySpend: AdRow[];
-  topByLeads: AdRow[];
-  topByRoas: AdRow[];
-  lastWebinar: {
-    since: string;
-    until: string;
-    label: string;
-    summary: {
-      totalSpend: number;
-      totalLeads: number;
-      totalPurchases: number;
-      avgCpl: number;
-      avgRoas: number;
-    };
-    topBySpend: AdRow[];
-    topByLeads: AdRow[];
-    topByRoas: AdRow[];
-  };
 }
 
 // ─── Regex helpers ────────────────────────────────────────────────────────────
@@ -212,8 +162,7 @@ function groupByNo(rows: RawInsightRow[]): AdRow[] {
 
     const leads = b.leads;
     const spend = b.spend;
-    const roas =
-      b.roasCount > 0 ? b.roasSum / b.roasCount : 0;
+    const roas = b.roasCount > 0 ? b.roasSum / b.roasCount : 0;
 
     result.push({
       no,
@@ -287,7 +236,6 @@ export async function GET() {
   }
 
   try {
-    // Fetch all-time and last-webinar insights in parallel
     const { since, until } = getLastWebinarPeriod();
 
     const [alltimeRows, webinarRows] = await Promise.all([
@@ -298,7 +246,6 @@ export async function GET() {
     const alltime = groupByNo(alltimeRows);
     const webinar = groupByNo(webinarRows);
 
-    // Compute account-level summary
     const totalSpend = alltime.reduce((s, r) => s + r.spend, 0);
     const totalLeads = alltime.reduce((s, r) => s + r.leads, 0);
     const totalImpressions = alltime.reduce((s, r) => s + r.impressions, 0);
@@ -311,7 +258,6 @@ export async function GET() {
         ? roasAds.reduce((s, r) => s + r.roas, 0) / roasAds.length
         : 0;
 
-    // Top 10 slices
     const topBySpend = [...alltime].sort((a, b) => b.spend - a.spend).slice(0, 10);
     const topByLeads = [...alltime].sort((a, b) => b.leads - a.leads).slice(0, 10);
     const topByRoasAll = alltime.filter((r) => r.purchases > 0 && r.roas > 0);

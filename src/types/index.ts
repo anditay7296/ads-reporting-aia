@@ -1,3 +1,54 @@
+export interface AdRow {
+  no: string;
+  creative: string;
+  adType: string;
+  spend: number;
+  leads: number;
+  purchases: number;
+  views: number;
+  cpl: number;
+  roas: number;
+  ctr: number;
+  cpc: number;
+  impressions: number;
+  clicks: number;
+  reach: number;
+}
+
+export interface MetaAdsData {
+  lastUpdated: string;
+  accountSummary: {
+    totalSpend: number;
+    totalLeads: number;
+    totalImpressions: number;
+    totalClicks: number;
+    totalReach: number;
+    totalPurchases: number;
+    avgCpl: number;
+    avgCtr: number;
+    avgCpc: number;
+    avgRoas: number;
+  };
+  topBySpend: AdRow[];
+  topByLeads: AdRow[];
+  topByRoas: AdRow[];
+  lastWebinar: {
+    since: string;
+    until: string;
+    label: string;
+    summary: {
+      totalSpend: number;
+      totalLeads: number;
+      totalPurchases: number;
+      avgCpl: number;
+      avgRoas: number;
+    };
+    topBySpend: AdRow[];
+    topByLeads: AdRow[];
+    topByRoas: AdRow[];
+  };
+}
+
 export interface KOLData {
   name: string;
   emoji: string;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { MetaAdsData, AdRow } from "@/app/api/meta-ads/route";
+import type { MetaAdsData, AdRow } from "@/types";
 
 // ─── Formatters ───────────────────────────────────────────────────────────────
 
