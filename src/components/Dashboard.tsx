@@ -199,7 +199,7 @@ export default function Dashboard() {
             <ChangeTag value={data.adsTotalChange} />
           </div>
           <p className="text-xs text-[#8b949e] mt-2">
-            Target: {data.adsTarget.toLocaleString()} · Extra:{" "}
+            Target: {data.adsTarget.toLocaleString()} · Gap:{" "}
             <span className="text-green-400 font-semibold">
               +{extra.toLocaleString()}
             </span>
@@ -257,7 +257,7 @@ export default function Dashboard() {
           </span>
           <span>·</span>
           <span>
-            Extra:{" "}
+            Gap:{" "}
             <span className="text-green-400 font-semibold">
               +{extra.toLocaleString()}
             </span>
