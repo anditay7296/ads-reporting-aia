@@ -76,6 +76,31 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
   );
 }
 
+const DEFAULT_VISIBLE = 10;
+
+function ShowMoreButton({
+  tableKey,
+  total,
+  expanded,
+  onToggle,
+}: {
+  tableKey: string;
+  total: number;
+  expanded: Set<string>;
+  onToggle: (key: string) => void;
+}) {
+  if (total <= DEFAULT_VISIBLE) return null;
+  const isExpanded = expanded.has(tableKey);
+  return (
+    <button
+      onClick={() => onToggle(tableKey)}
+      className="mt-3 w-full py-2 text-xs font-bold uppercase tracking-wider text-gray-400 hover:text-white bg-gray-800/50 hover:bg-gray-800 border border-gray-700 rounded-lg transition-colors"
+    >
+      {isExpanded ? "Show Less" : `Show More (${total} total)`}
+    </button>
+  );
+}
+
 function StatGrid({
   items,
 }: {
@@ -425,6 +450,22 @@ export default function MetaAdsReport() {
   const [lastFetched, setLastFetched] = useState<string>("");
   const [stale, setStale] = useState(false);
   const [staleCachedAt, setStaleCachedAt] = useState<number | null>(null);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  const toggleExpand = useCallback((key: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
+
+  const visibleRows = useCallback(
+    (key: string, rows: AdRow[]) =>
+      expanded.has(key) ? rows : rows.slice(0, DEFAULT_VISIBLE),
+    [expanded],
+  );
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -574,35 +615,43 @@ export default function MetaAdsReport() {
                 />
               </div>
 
-              {/* Webinar Top 10 by Spend */}
+              {/* Webinar Top by Spend */}
               <div className="f1-card p-5">
-                <SectionHeader>Top 10 Ads · Last Webinar · By Spend</SectionHeader>
-                <Top10BySpend rows={data.lastWebinar.topBySpend} />
+                <SectionHeader>Top Ads · Last Webinar · By Spend</SectionHeader>
+                <Top10BySpend rows={visibleRows("w-spend", data.lastWebinar.topBySpend)} />
+                <ShowMoreButton tableKey="w-spend" total={data.lastWebinar.topBySpend.length} expanded={expanded} onToggle={toggleExpand} />
               </div>
 
-              {/* Webinar Top 10 by Leads */}
+              {/* Webinar Top by Leads */}
               <div className="f1-card p-5">
-                <SectionHeader>Top 10 Ads · Last Webinar · By Leads</SectionHeader>
-                <Top10ByLeads rows={data.lastWebinar.topByLeads} />
+                <SectionHeader>Top Ads · Last Webinar · By Leads</SectionHeader>
+                <Top10ByLeads rows={visibleRows("w-leads", data.lastWebinar.topByLeads)} />
+                <ShowMoreButton tableKey="w-leads" total={data.lastWebinar.topByLeads.length} expanded={expanded} onToggle={toggleExpand} />
               </div>
 
-              {/* Webinar Top 10 by Purchases */}
+              {/* Webinar Top by Purchases */}
               <div className="f1-card p-5">
-                <SectionHeader>Top 10 Ads · Last Webinar · By Purchases</SectionHeader>
+                <SectionHeader>Top Ads · Last Webinar · By Purchases</SectionHeader>
                 {data.lastWebinar.topByPurchases.length === 0 ? (
                   <p className="text-gray-600 text-sm">No purchase data for this period</p>
                 ) : (
-                  <Top10ByPurchases rows={data.lastWebinar.topByPurchases} />
+                  <>
+                    <Top10ByPurchases rows={visibleRows("w-purchases", data.lastWebinar.topByPurchases)} />
+                    <ShowMoreButton tableKey="w-purchases" total={data.lastWebinar.topByPurchases.length} expanded={expanded} onToggle={toggleExpand} />
+                  </>
                 )}
               </div>
 
-              {/* Webinar Top 10 by ROAS */}
+              {/* Webinar Top by ROAS */}
               <div className="f1-card p-5">
-                <SectionHeader>Top 10 Ads · Last Webinar · By ROAS</SectionHeader>
+                <SectionHeader>Top Ads · Last Webinar · By ROAS</SectionHeader>
                 {data.lastWebinar.topByRoas.length === 0 ? (
                   <p className="text-gray-600 text-sm">No purchase data for this period</p>
                 ) : (
-                  <Top10ByRoas rows={data.lastWebinar.topByRoas} />
+                  <>
+                    <Top10ByRoas rows={visibleRows("w-roas", data.lastWebinar.topByRoas)} />
+                    <ShowMoreButton tableKey="w-roas" total={data.lastWebinar.topByRoas.length} expanded={expanded} onToggle={toggleExpand} />
+                  </>
                 )}
               </div>
             </div>
@@ -624,35 +673,43 @@ export default function MetaAdsReport() {
               />
             </div>
 
-            {/* ── Top 10 by Spend ── */}
+            {/* ── Top by Spend ── */}
             <div className="f1-card p-5">
-              <SectionHeader>Top 10 Ads by Spend</SectionHeader>
-              <Top10BySpend rows={data.topBySpend} />
+              <SectionHeader>Top Ads by Spend</SectionHeader>
+              <Top10BySpend rows={visibleRows("a-spend", data.topBySpend)} />
+              <ShowMoreButton tableKey="a-spend" total={data.topBySpend.length} expanded={expanded} onToggle={toggleExpand} />
             </div>
 
-            {/* ── Top 10 by Leads ── */}
+            {/* ── Top by Leads ── */}
             <div className="f1-card p-5">
-              <SectionHeader>Top 10 Ads by Leads</SectionHeader>
-              <Top10ByLeads rows={data.topByLeads} />
+              <SectionHeader>Top Ads by Leads</SectionHeader>
+              <Top10ByLeads rows={visibleRows("a-leads", data.topByLeads)} />
+              <ShowMoreButton tableKey="a-leads" total={data.topByLeads.length} expanded={expanded} onToggle={toggleExpand} />
             </div>
 
-            {/* ── Top 10 by Purchases ── */}
+            {/* ── Top by Purchases ── */}
             <div className="f1-card p-5">
-              <SectionHeader>Top 10 Ads by Purchases</SectionHeader>
+              <SectionHeader>Top Ads by Purchases</SectionHeader>
               {data.topByPurchases.length === 0 ? (
                 <p className="text-gray-600 text-sm">No purchase data available</p>
               ) : (
-                <Top10ByPurchases rows={data.topByPurchases} />
+                <>
+                  <Top10ByPurchases rows={visibleRows("a-purchases", data.topByPurchases)} />
+                  <ShowMoreButton tableKey="a-purchases" total={data.topByPurchases.length} expanded={expanded} onToggle={toggleExpand} />
+                </>
               )}
             </div>
 
-            {/* ── Top 10 by ROAS ── */}
+            {/* ── Top by ROAS ── */}
             <div className="f1-card p-5">
-              <SectionHeader>Top 10 Ads by ROAS</SectionHeader>
+              <SectionHeader>Top Ads by ROAS</SectionHeader>
               {data.topByRoas.length === 0 ? (
                 <p className="text-gray-600 text-sm">No purchase data available</p>
               ) : (
-                <Top10ByRoas rows={data.topByRoas} />
+                <>
+                  <Top10ByRoas rows={visibleRows("a-roas", data.topByRoas)} />
+                  <ShowMoreButton tableKey="a-roas" total={data.topByRoas.length} expanded={expanded} onToggle={toggleExpand} />
+                </>
               )}
             </div>
           </>

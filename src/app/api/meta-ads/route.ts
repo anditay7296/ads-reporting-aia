@@ -296,8 +296,8 @@ export async function GET() {
   try {
     const { since, until } = getLastWebinarPeriod();
 
-    // Fetch sequentially: all-time capped at 6 pages (3000 ads), webinar unbounded
-    const alltimeRows = await fetchInsights({ date_preset: "maximum" }, 6);
+    // Fetch all-time with high page cap (50 pages = 25,000 ads) to capture full spend
+    const alltimeRows = await fetchInsights({ date_preset: "maximum" }, 50);
     const webinarRows = await fetchInsights(
       { time_range: JSON.stringify({ since, until }) },
       25,
@@ -328,12 +328,12 @@ export async function GET() {
         ? roasAds.reduce((s, r) => s + r.roas, 0) / roasAds.length
         : 0;
 
-    const topBySpend = [...alltime].sort((a, b) => b.spend - a.spend).slice(0, 10);
-    const topByLeads = [...alltime].sort((a, b) => b.leads - a.leads).slice(0, 10);
+    const topBySpend = [...alltime].sort((a, b) => b.spend - a.spend);
+    const topByLeads = [...alltime].sort((a, b) => b.leads - a.leads);
     const topByPurchasesAll = alltime.filter((r) => r.purchases > 0);
-    const topByPurchases = [...topByPurchasesAll].sort((a, b) => b.purchases - a.purchases).slice(0, 10);
+    const topByPurchases = [...topByPurchasesAll].sort((a, b) => b.purchases - a.purchases);
     const topByRoasAll = alltime.filter((r) => r.purchases > 0 && r.roas > 0);
-    const topByRoas = [...topByRoasAll].sort((a, b) => b.roas - a.roas).slice(0, 10);
+    const topByRoas = [...topByRoasAll].sort((a, b) => b.roas - a.roas);
 
     const webinarPurchaseAds = webinar.filter((r) => r.purchases > 0);
     const webinarRoasAds = webinar.filter((r) => r.purchases > 0 && r.roas > 0);
@@ -361,10 +361,10 @@ export async function GET() {
         until,
         label: `${since} ~ ${until}`,
         summary: buildSummary(webinar),
-        topBySpend: [...webinar].sort((a, b) => b.spend - a.spend).slice(0, 10),
-        topByLeads: [...webinar].sort((a, b) => b.leads - a.leads).slice(0, 10),
-        topByPurchases: [...webinarPurchaseAds].sort((a, b) => b.purchases - a.purchases).slice(0, 10),
-        topByRoas: [...webinarRoasAds].sort((a, b) => b.roas - a.roas).slice(0, 10),
+        topBySpend: [...webinar].sort((a, b) => b.spend - a.spend),
+        topByLeads: [...webinar].sort((a, b) => b.leads - a.leads),
+        topByPurchases: [...webinarPurchaseAds].sort((a, b) => b.purchases - a.purchases),
+        topByRoas: [...webinarRoasAds].sort((a, b) => b.roas - a.roas),
       },
     };
 
