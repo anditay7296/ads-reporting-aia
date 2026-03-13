@@ -195,8 +195,8 @@ function Top10BySpend({ rows }: { rows: AdRow[] }) {
       header: "Spend",
       render: (r: AdRow) => (
         <div>
-          <span className="text-f1-red font-bold">{fmtRM(r.spend)}</span>
-          <BarIndicator pct={(r.spend / maxSpend) * 100} />
+          <span className="text-red-600 font-bold">{fmtRM(r.spend)}</span>
+          <BarIndicator pct={(r.spend / maxSpend) * 100} color="bg-red-500" />
         </div>
       ),
       className: "whitespace-nowrap",
