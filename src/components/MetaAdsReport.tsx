@@ -22,12 +22,9 @@ function fmtRoas(n: number) {
 
 /** Returns the Facebook post URL from effective_object_story_id, or null if unavailable. */
 function fbPostUrl(storyId?: string): string | null {
-  if (!storyId) return null;
-  const sep = storyId.indexOf("_");
-  if (sep === -1) return null;
-  const pageId = storyId.slice(0, sep);
-  const postId = storyId.slice(sep + 1);
-  return `https://www.facebook.com/permalink.php?story_fbid=${postId}&id=${pageId}`;
+  if (!storyId || !storyId.includes("_")) return null;
+  const [pageId, postId] = storyId.split("_", 2);
+  return `https://www.facebook.com/${pageId}/posts/${postId}/`;
 }
 
 // ─── Podium helpers ───────────────────────────────────────────────────────────

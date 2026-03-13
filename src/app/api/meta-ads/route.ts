@@ -109,8 +109,10 @@ async function fetchStoryIds(adIds: string[]): Promise<Map<string, string>> {
 
   await Promise.all(
     chunks.map(async (chunk) => {
+      // Must fetch through creative.fields() — effective_object_story_id
+      // lives on the AdCreative, not directly on the Ad object.
       const url =
-        `${META_BASE}/?ids=${chunk.join(",")}&fields=effective_object_story_id` +
+        `${META_BASE}/?ids=${chunk.join(",")}&fields=id,creative.fields(effective_object_story_id)` +
         `&access_token=${META_TOKEN}`;
       try {
         const res = await fetch(url, {
@@ -120,14 +122,15 @@ async function fetchStoryIds(adIds: string[]): Promise<Map<string, string>> {
         if (!res.ok) return;
         const json = await res.json();
         for (const [id, val] of Object.entries(
-          json as Record<string, { effective_object_story_id?: string }>,
+          json as Record<string, { creative?: { effective_object_story_id?: string } }>,
         )) {
-          if (val?.effective_object_story_id) {
-            map.set(id, val.effective_object_story_id);
+          const storyId = val?.creative?.effective_object_story_id;
+          if (storyId) {
+            map.set(id, storyId);
           }
         }
       } catch {
-        // non-fatal — fall back to Ads Manager link
+        // non-fatal — ad number shown as plain text
       }
     }),
   );
