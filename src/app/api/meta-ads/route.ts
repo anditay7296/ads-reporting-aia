@@ -245,7 +245,10 @@ export async function GET() {
 
     // Fetch sequentially: all-time capped at 6 pages (3000 ads), webinar unbounded
     const alltimeRows = await fetchInsights({ date_preset: "maximum" }, 6);
-    const webinarRows = await fetchInsights({ since, until }, 25);
+    const webinarRows = await fetchInsights(
+      { time_range: JSON.stringify({ since, until }) },
+      25,
+    );
 
     const alltime = groupByNo(alltimeRows);
     const webinar = groupByNo(webinarRows);
