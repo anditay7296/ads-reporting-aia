@@ -286,6 +286,57 @@ function Top10ByLeads({ rows }: { rows: AdRow[] }) {
   return <AdsTable rows={rows} columns={cols} />;
 }
 
+function Top10ByPurchases({ rows }: { rows: AdRow[] }) {
+  const maxPurchases = rows[0]?.purchases || 1;
+  const cols = [
+    {
+      header: "Ad No.",
+      render: (r: AdRow) => <AdNoLink r={r} />,
+      className: "w-20",
+    },
+    {
+      header: "Creative",
+      render: (r: AdRow) => (
+        <span className="text-gray-900 font-semibold truncate block max-w-[200px]" title={r.creative}>
+          {r.creative}
+        </span>
+      ),
+    },
+    {
+      header: "Purchases",
+      render: (r: AdRow) => (
+        <div>
+          <span className="text-violet-600 font-bold">{fmtNum(r.purchases)}</span>
+          <BarIndicator pct={(r.purchases / maxPurchases) * 100} color="bg-violet-500" />
+        </div>
+      ),
+    },
+    {
+      header: "Spend",
+      render: (r: AdRow) => <span className="text-gray-700">{fmtRM(r.spend)}</span>,
+      className: "whitespace-nowrap",
+    },
+    {
+      header: "Leads",
+      render: (r: AdRow) => <span className="text-gray-700">{r.leads || "—"}</span>,
+    },
+    {
+      header: "CPL",
+      render: (r: AdRow) => (
+        <span className="text-gray-700">{r.leads > 0 ? fmtRM(r.cpl) : "—"}</span>
+      ),
+      className: "whitespace-nowrap",
+    },
+    {
+      header: "ROAS",
+      render: (r: AdRow) => (
+        <span className="text-gray-700">{r.roas > 0 ? fmtRoas(r.roas) : "—"}</span>
+      ),
+    },
+  ];
+  return <AdsTable rows={rows} columns={cols} />;
+}
+
 function Top10ByRoas({ rows }: { rows: AdRow[] }) {
   const maxRoas = rows[0]?.roas || 1;
   const cols = [
@@ -465,6 +516,16 @@ export default function MetaAdsReport() {
                 <Top10ByLeads rows={data.lastWebinar.topByLeads} />
               </div>
 
+              {/* Webinar Top 10 by Purchases */}
+              <div className="f1-card p-5">
+                <SectionHeader>Top 10 Ads · Last Webinar · By Purchases</SectionHeader>
+                {data.lastWebinar.topByPurchases.length === 0 ? (
+                  <p className="text-gray-600 text-sm">No purchase data for this period</p>
+                ) : (
+                  <Top10ByPurchases rows={data.lastWebinar.topByPurchases} />
+                )}
+              </div>
+
               {/* Webinar Top 10 by ROAS */}
               <div className="f1-card p-5">
                 <SectionHeader>Top 10 Ads · Last Webinar · By ROAS</SectionHeader>
@@ -503,6 +564,16 @@ export default function MetaAdsReport() {
             <div className="f1-card p-5">
               <SectionHeader>Top 10 Ads by Leads</SectionHeader>
               <Top10ByLeads rows={data.topByLeads} />
+            </div>
+
+            {/* ── Top 10 by Purchases ── */}
+            <div className="f1-card p-5">
+              <SectionHeader>Top 10 Ads by Purchases</SectionHeader>
+              {data.topByPurchases.length === 0 ? (
+                <p className="text-gray-600 text-sm">No purchase data available</p>
+              ) : (
+                <Top10ByPurchases rows={data.topByPurchases} />
+              )}
             </div>
 
             {/* ── Top 10 by ROAS ── */}

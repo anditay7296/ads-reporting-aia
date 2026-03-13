@@ -33,6 +33,7 @@ export interface MetaAdsData {
   };
   topBySpend: AdRow[];
   topByLeads: AdRow[];
+  topByPurchases: AdRow[];
   topByRoas: AdRow[];
   lastWebinar: {
     since: string;
@@ -47,6 +48,7 @@ export interface MetaAdsData {
     };
     topBySpend: AdRow[];
     topByLeads: AdRow[];
+    topByPurchases: AdRow[];
     topByRoas: AdRow[];
   };
 }

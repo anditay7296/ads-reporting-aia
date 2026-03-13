@@ -326,9 +326,12 @@ export async function GET() {
 
     const topBySpend = [...alltime].sort((a, b) => b.spend - a.spend).slice(0, 10);
     const topByLeads = [...alltime].sort((a, b) => b.leads - a.leads).slice(0, 10);
+    const topByPurchasesAll = alltime.filter((r) => r.purchases > 0);
+    const topByPurchases = [...topByPurchasesAll].sort((a, b) => b.purchases - a.purchases).slice(0, 10);
     const topByRoasAll = alltime.filter((r) => r.purchases > 0 && r.roas > 0);
     const topByRoas = [...topByRoasAll].sort((a, b) => b.roas - a.roas).slice(0, 10);
 
+    const webinarPurchaseAds = webinar.filter((r) => r.purchases > 0);
     const webinarRoasAds = webinar.filter((r) => r.purchases > 0 && r.roas > 0);
 
     const data: MetaAdsData = {
@@ -347,6 +350,7 @@ export async function GET() {
       },
       topBySpend,
       topByLeads,
+      topByPurchases,
       topByRoas,
       lastWebinar: {
         since,
@@ -355,6 +359,7 @@ export async function GET() {
         summary: buildSummary(webinar),
         topBySpend: [...webinar].sort((a, b) => b.spend - a.spend).slice(0, 10),
         topByLeads: [...webinar].sort((a, b) => b.leads - a.leads).slice(0, 10),
+        topByPurchases: [...webinarPurchaseAds].sort((a, b) => b.purchases - a.purchases).slice(0, 10),
         topByRoas: [...webinarRoasAds].sort((a, b) => b.roas - a.roas).slice(0, 10),
       },
     };
