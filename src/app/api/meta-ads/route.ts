@@ -304,9 +304,9 @@ export async function GET() {
     const filteredWebinarRows = webinarRows.filter((r) => !isExcludedPage(r.ad_name));
 
     // Batch-fetch real Facebook post URLs for all unique ad IDs
-    const allAdIds = [
-      ...new Set([...filteredAlltimeRows, ...filteredWebinarRows].map((r) => r.ad_id)),
-    ];
+    const allAdIds = Array.from(
+      new Set([...filteredAlltimeRows, ...filteredWebinarRows].map((r) => r.ad_id)),
+    );
     const storyMap = await fetchStoryIds(allAdIds);
 
     const alltime = groupByNo(filteredAlltimeRows, storyMap);
