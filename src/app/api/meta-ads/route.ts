@@ -31,6 +31,11 @@ function extractNo(adName: string): string {
   return m ? m[1] : adName.slice(0, 20);
 }
 
+/** Exclude ads from the AI 小白创业 page — tracked separately, not needed here. */
+function isExcludedPage(adName: string): boolean {
+  return adName.includes("AI 小白创业") || adName.includes("小白创业");
+}
+
 function isOriginal(adName: string): boolean {
   return !adName.includes("– Copy") && !adName.replace("–", "-").includes("- Copy");
 }
@@ -291,14 +296,18 @@ export async function GET() {
       25,
     );
 
+    // Exclude AI 小白创业 page ads — not tracked here
+    const filteredAlltimeRows = alltimeRows.filter((r) => !isExcludedPage(r.ad_name));
+    const filteredWebinarRows = webinarRows.filter((r) => !isExcludedPage(r.ad_name));
+
     // Batch-fetch real Facebook post URLs for all unique ad IDs
     const allAdIds = [
-      ...new Set([...alltimeRows, ...webinarRows].map((r) => r.ad_id)),
+      ...new Set([...filteredAlltimeRows, ...filteredWebinarRows].map((r) => r.ad_id)),
     ];
     const storyMap = await fetchStoryIds(allAdIds);
 
-    const alltime = groupByNo(alltimeRows, storyMap);
-    const webinar = groupByNo(webinarRows, storyMap);
+    const alltime = groupByNo(filteredAlltimeRows, storyMap);
+    const webinar = groupByNo(filteredWebinarRows, storyMap);
 
     const totalSpend = alltime.reduce((s, r) => s + r.spend, 0);
     const totalLeads = alltime.reduce((s, r) => s + r.leads, 0);
