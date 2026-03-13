@@ -388,26 +388,78 @@ function Top10ByRoas({ rows }: { rows: AdRow[] }) {
 
 // ─── Main component ──────────────────────────────────────────────────────────
 
+const LOCAL_CACHE_KEY = "meta-ads-cache-v1";
+
+interface LocalCache {
+  data: MetaAdsData;
+  cachedAt: number; // ms timestamp
+}
+
+function saveLocalCache(data: MetaAdsData) {
+  try {
+    localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify({ data, cachedAt: Date.now() }));
+  } catch { /* storage full or unavailable */ }
+}
+
+function loadLocalCache(): LocalCache | null {
+  try {
+    const raw = localStorage.getItem(LOCAL_CACHE_KEY);
+    return raw ? (JSON.parse(raw) as LocalCache) : null;
+  } catch {
+    return null;
+  }
+}
+
+function fmtCachedAt(ts: number): string {
+  const d = new Date(ts);
+  return d.toLocaleString("en-MY", {
+    month: "short", day: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
+}
+
 export default function MetaAdsReport() {
   const [data, setData] = useState<MetaAdsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastFetched, setLastFetched] = useState<string>("");
+  const [stale, setStale] = useState(false);
+  const [staleCachedAt, setStaleCachedAt] = useState<number | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const res = await fetch("/api/meta-ads", { cache: "no-store" });
+      const isStale = res.headers.get("X-Cache") === "STALE";
+      const cachedAtHeader = res.headers.get("X-Cached-At");
+
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
         throw new Error(json.error ?? `HTTP ${res.status}`);
       }
+
       const json: MetaAdsData = await res.json();
       setData(json);
+      setStale(isStale);
+      setStaleCachedAt(isStale && cachedAtHeader ? new Date(cachedAtHeader).getTime() : null);
       setLastFetched(new Date().toLocaleTimeString("en-MY", { hour: "2-digit", minute: "2-digit" }));
+
+      // Persist fresh data to localStorage for future offline/error fallback
+      if (!isStale) {
+        saveLocalCache(json);
+      }
     } catch (e) {
-      setError(String(e));
+      // Fall back to localStorage cache before showing error
+      const local = loadLocalCache();
+      if (local) {
+        setData(local.data);
+        setStale(true);
+        setStaleCachedAt(local.cachedAt);
+        setLastFetched(new Date().toLocaleTimeString("en-MY", { hour: "2-digit", minute: "2-digit" }));
+      } else {
+        setError(String(e));
+      }
     } finally {
       setLoading(false);
     }
@@ -455,6 +507,24 @@ export default function MetaAdsReport() {
             <button
               onClick={fetchData}
               className="mt-3 px-4 py-1.5 text-xs font-bold uppercase tracking-wider bg-f1-red/10 border border-f1-red/30 text-f1-red rounded-md hover:bg-f1-red/20 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
+        {/* Stale cache banner */}
+        {stale && data && !loading && (
+          <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-amber-950/40 border border-amber-500/30 text-amber-400 text-xs font-semibold">
+            <span className="text-amber-400">⚠</span>
+            <span>
+              Showing cached data
+              {staleCachedAt ? ` from ${fmtCachedAt(staleCachedAt)}` : ""}
+              {" — "}live fetch unavailable.
+            </span>
+            <button
+              onClick={fetchData}
+              className="ml-auto px-3 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 transition-colors"
             >
               Retry
             </button>

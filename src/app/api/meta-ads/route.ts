@@ -8,6 +8,10 @@ const META_BASE = "https://graph.facebook.com/v21.0";
 
 export const dynamic = "force-dynamic"; // skip build-time pre-rendering
 
+// ─── Server-side in-memory cache ─────────────────────────────────────────────
+// Persists within a Vercel function instance. Serves stale data on API failure.
+let _serverCache: { data: MetaAdsData; cachedAt: number } | null = null;
+
 // ─── Raw API types ────────────────────────────────────────────────────────────
 
 interface RawInsightRow {
@@ -364,6 +368,9 @@ export async function GET() {
       },
     };
 
+    // Save to server-side cache before returning
+    _serverCache = { data, cachedAt: Date.now() };
+
     return NextResponse.json(data, {
       headers: {
         "Cache-Control": "s-maxage=1800, stale-while-revalidate",
@@ -371,6 +378,19 @@ export async function GET() {
     });
   } catch (err) {
     console.error("Meta Ads reporting error:", err);
+
+    // Return cached data if available, rather than a hard error
+    if (_serverCache) {
+      console.warn("Meta Ads: returning stale cache from", new Date(_serverCache.cachedAt).toISOString());
+      return NextResponse.json(_serverCache.data, {
+        headers: {
+          "Cache-Control": "no-store",
+          "X-Cache": "STALE",
+          "X-Cached-At": new Date(_serverCache.cachedAt).toISOString(),
+        },
+      });
+    }
+
     return NextResponse.json(
       { error: "Failed to fetch Meta Ads data", detail: String(err) },
       { status: 502 },
