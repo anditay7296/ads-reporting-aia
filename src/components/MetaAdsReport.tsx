@@ -24,20 +24,39 @@ function fbAdUrl(adId: string) {
   return `https://www.facebook.com/adsmanager/manage/ads?act=555700366717773&selected_ad_ids=${adId}`;
 }
 
-// ─── F1 Helpers ──────────────────────────────────────────────────────────────
+// ─── Podium helpers ───────────────────────────────────────────────────────────
 
-function posColor(i: number) {
-  if (i === 0) return "text-f1-gold";
-  if (i === 1) return "text-f1-silver";
-  if (i === 2) return "text-f1-bronze";
-  return "text-gray-600";
+function rowStyle(i: number) {
+  if (i === 0) return "bg-amber-50  border-l-[4px] border-l-amber-400  hover:bg-amber-100";
+  if (i === 1) return "bg-slate-50  border-l-[4px] border-l-slate-400  hover:bg-slate-100";
+  if (i === 2) return "bg-orange-50 border-l-[4px] border-l-orange-400 hover:bg-orange-100";
+  return "bg-white border-l-[4px] border-l-transparent hover:bg-gray-50";
 }
 
-function rowClass(i: number) {
-  if (i === 0) return "f1-row-p1 border-l-[3px] border-f1-gold";
-  if (i === 1) return "f1-row-p2 border-l-[3px] border-f1-silver";
-  if (i === 2) return "f1-row-p3 border-l-[3px] border-f1-bronze";
-  return "border-l-[3px] border-f1-red/20";
+function PosBadge({ i }: { i: number }) {
+  if (i === 0)
+    return (
+      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-amber-400 text-white text-sm font-extrabold shadow shadow-amber-200 ring-2 ring-amber-300">
+        1
+      </span>
+    );
+  if (i === 1)
+    return (
+      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-400 text-white text-sm font-extrabold shadow shadow-slate-200 ring-2 ring-slate-300">
+        2
+      </span>
+    );
+  if (i === 2)
+    return (
+      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-orange-400 text-white text-sm font-extrabold shadow shadow-orange-200 ring-2 ring-orange-300">
+        3
+      </span>
+    );
+  return (
+    <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-gray-100 text-gray-500 text-xs font-bold">
+      {i + 1}
+    </span>
+  );
 }
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
@@ -91,7 +110,7 @@ function AdNoLink({ r }: { r: AdRow }) {
       href={fbAdUrl(r.adId)}
       target="_blank"
       rel="noopener noreferrer"
-      className="font-mono text-xs text-blue-500 hover:text-blue-700 hover:underline font-semibold"
+      className="font-mono text-xs text-blue-600 hover:text-blue-800 hover:underline font-bold"
     >
       {r.no}
     </a>
@@ -115,17 +134,17 @@ function AdsTable({
     );
   }
   return (
-    <div className="overflow-x-auto rounded-lg border border-gray-200">
-      <table className="w-full text-sm bg-white">
+    <div className="overflow-x-auto rounded-xl border border-gray-200 shadow-sm">
+      <table className="w-full text-sm">
         <thead>
-          <tr className="bg-gray-50 border-b border-gray-200">
-            <th className="text-left py-2.5 px-3 text-[10px] uppercase tracking-[0.15em] font-bold text-gray-400 w-10">
-              #
+          <tr className="bg-gray-800 border-b border-gray-700">
+            <th className="text-left py-3 px-3 text-[10px] uppercase tracking-[0.15em] font-bold text-gray-300 w-12">
+              Rank
             </th>
             {columns.map((col) => (
               <th
                 key={col.header}
-                className={`text-left py-2.5 px-3 text-[10px] uppercase tracking-[0.15em] font-bold text-gray-400 ${col.className ?? ""}`}
+                className={`text-left py-3 px-3 text-[10px] uppercase tracking-[0.15em] font-bold text-gray-300 ${col.className ?? ""}`}
               >
                 {col.header}
               </th>
@@ -136,20 +155,13 @@ function AdsTable({
           {rows.map((row, i) => (
             <tr
               key={`${row.no}-${i}`}
-              className={`border-b border-gray-100 hover:bg-gray-50 transition-colors last:border-0 ${
-                i === 0 ? "border-l-[3px] border-l-f1-gold" :
-                i === 1 ? "border-l-[3px] border-l-f1-silver" :
-                i === 2 ? "border-l-[3px] border-l-f1-bronze" :
-                "border-l-[3px] border-l-transparent"
-              }`}
+              className={`border-b border-gray-100 transition-colors last:border-0 ${rowStyle(i)}`}
             >
-              <td className="py-2.5 px-3">
-                <span className={`font-mono text-base font-extrabold ${posColor(i)}`}>
-                  {i + 1}
-                </span>
+              <td className="py-3 px-3">
+                <PosBadge i={i} />
               </td>
               {columns.map((col) => (
-                <td key={col.header} className={`py-2.5 px-3 ${col.className ?? ""}`}>
+                <td key={col.header} className={`py-3 px-3 ${col.className ?? ""}`}>
                   {col.render(row, i)}
                 </td>
               ))}
@@ -174,7 +186,7 @@ function Top10BySpend({ rows }: { rows: AdRow[] }) {
     {
       header: "Creative",
       render: (r: AdRow) => (
-        <span className="text-gray-800 font-medium truncate block max-w-[200px]" title={r.creative}>
+        <span className="text-gray-900 font-semibold truncate block max-w-[200px]" title={r.creative}>
           {r.creative}
         </span>
       ),
@@ -191,23 +203,23 @@ function Top10BySpend({ rows }: { rows: AdRow[] }) {
     },
     {
       header: "Leads",
-      render: (r: AdRow) => <span className="text-gray-600 font-medium">{r.leads || "—"}</span>,
+      render: (r: AdRow) => <span className="text-gray-800 font-semibold">{r.leads || "—"}</span>,
     },
     {
       header: "CPL",
       render: (r: AdRow) => (
-        <span className="text-gray-600">{r.leads > 0 ? fmtRM(r.cpl) : "—"}</span>
+        <span className="text-gray-700">{r.leads > 0 ? fmtRM(r.cpl) : "—"}</span>
       ),
       className: "whitespace-nowrap",
     },
     {
       header: "Purchases",
-      render: (r: AdRow) => <span className="text-gray-600">{r.purchases || "—"}</span>,
+      render: (r: AdRow) => <span className="text-gray-700">{r.purchases || "—"}</span>,
     },
     {
       header: "ROAS",
       render: (r: AdRow) => (
-        <span className="text-gray-600">{r.roas > 0 ? fmtRoas(r.roas) : "—"}</span>
+        <span className="text-gray-700">{r.roas > 0 ? fmtRoas(r.roas) : "—"}</span>
       ),
     },
   ];
@@ -225,7 +237,7 @@ function Top10ByLeads({ rows }: { rows: AdRow[] }) {
     {
       header: "Creative",
       render: (r: AdRow) => (
-        <span className="text-gray-800 font-medium truncate block max-w-[200px]" title={r.creative}>
+        <span className="text-gray-900 font-semibold truncate block max-w-[200px]" title={r.creative}>
           {r.creative}
         </span>
       ),
@@ -241,24 +253,24 @@ function Top10ByLeads({ rows }: { rows: AdRow[] }) {
     },
     {
       header: "Spend",
-      render: (r: AdRow) => <span className="text-gray-600">{fmtRM(r.spend)}</span>,
+      render: (r: AdRow) => <span className="text-gray-700">{fmtRM(r.spend)}</span>,
       className: "whitespace-nowrap",
     },
     {
       header: "CPL",
       render: (r: AdRow) => (
-        <span className="text-gray-600">{r.leads > 0 ? fmtRM(r.cpl) : "—"}</span>
+        <span className="text-gray-700">{r.leads > 0 ? fmtRM(r.cpl) : "—"}</span>
       ),
       className: "whitespace-nowrap",
     },
     {
       header: "Purchases",
-      render: (r: AdRow) => <span className="text-gray-600">{r.purchases || "—"}</span>,
+      render: (r: AdRow) => <span className="text-gray-700">{r.purchases || "—"}</span>,
     },
     {
       header: "ROAS",
       render: (r: AdRow) => (
-        <span className="text-gray-600">{r.roas > 0 ? fmtRoas(r.roas) : "—"}</span>
+        <span className="text-gray-700">{r.roas > 0 ? fmtRoas(r.roas) : "—"}</span>
       ),
     },
   ];
@@ -276,7 +288,7 @@ function Top10ByRoas({ rows }: { rows: AdRow[] }) {
     {
       header: "Creative",
       render: (r: AdRow) => (
-        <span className="text-gray-800 font-medium truncate block max-w-[200px]" title={r.creative}>
+        <span className="text-gray-900 font-semibold truncate block max-w-[200px]" title={r.creative}>
           {r.creative}
         </span>
       ),
@@ -292,22 +304,22 @@ function Top10ByRoas({ rows }: { rows: AdRow[] }) {
     },
     {
       header: "Leads",
-      render: (r: AdRow) => <span className="text-gray-600">{r.leads || "—"}</span>,
+      render: (r: AdRow) => <span className="text-gray-700">{r.leads || "—"}</span>,
     },
     {
       header: "CPL",
       render: (r: AdRow) => (
-        <span className="text-gray-600">{r.leads > 0 ? fmtRM(r.cpl) : "—"}</span>
+        <span className="text-gray-700">{r.leads > 0 ? fmtRM(r.cpl) : "—"}</span>
       ),
       className: "whitespace-nowrap",
     },
     {
       header: "Purchases",
-      render: (r: AdRow) => <span className="text-gray-600 font-medium">{fmtNum(r.purchases)}</span>,
+      render: (r: AdRow) => <span className="text-gray-800 font-semibold">{fmtNum(r.purchases)}</span>,
     },
     {
       header: "Spend",
-      render: (r: AdRow) => <span className="text-gray-600">{fmtRM(r.spend)}</span>,
+      render: (r: AdRow) => <span className="text-gray-700">{fmtRM(r.spend)}</span>,
       className: "whitespace-nowrap",
     },
   ];
