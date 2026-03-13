@@ -1,5 +1,6 @@
 export interface AdRow {
   no: string;
+  adId: string;
   creative: string;
   adType: string;
   spend: number;

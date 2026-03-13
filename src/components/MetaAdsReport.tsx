@@ -18,13 +18,39 @@ function fmtRoas(n: number) {
   return n.toFixed(2);
 }
 
+// ─── Facebook Ads Manager link ────────────────────────────────────────────────
+
+function fbAdUrl(adId: string) {
+  return `https://www.facebook.com/adsmanager/manage/ads?act=555700366717773&selected_ad_ids=${adId}`;
+}
+
+// ─── F1 Helpers ──────────────────────────────────────────────────────────────
+
+function posColor(i: number) {
+  if (i === 0) return "text-f1-gold";
+  if (i === 1) return "text-f1-silver";
+  if (i === 2) return "text-f1-bronze";
+  return "text-gray-600";
+}
+
+function rowClass(i: number) {
+  if (i === 0) return "f1-row-p1 border-l-[3px] border-f1-gold";
+  if (i === 1) return "f1-row-p2 border-l-[3px] border-f1-silver";
+  if (i === 2) return "f1-row-p3 border-l-[3px] border-f1-bronze";
+  return "border-l-[3px] border-f1-red/20";
+}
+
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
 function SectionHeader({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="text-sm font-bold uppercase tracking-widest text-[#8b949e] mb-3">
-      {children}
-    </h3>
+    <div className="flex items-center gap-3 mb-4">
+      <div className="w-1 h-6 bg-f1-red rounded-full" />
+      <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-f1-red">
+        {children}
+      </h3>
+      <div className="f1-divider" />
+    </div>
   );
 }
 
@@ -36,18 +62,39 @@ function StatGrid({
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
       {items.map(({ label, value, highlight }) => (
-        <div key={label} className="card p-3">
-          <div className="text-[11px] uppercase tracking-wider text-[#8b949e] mb-1">
+        <div key={label} className="f1-stat-card">
+          <div className="text-[10px] uppercase tracking-[0.15em] text-gray-500 font-bold mb-1">
             {label}
           </div>
           <div
-            className={`text-lg font-bold ${highlight ? "text-[#58a6ff]" : "text-[#e6edf3]"}`}
+            className={`text-xl font-extrabold tracking-tight ${highlight ? "text-f1-red" : "text-white"}`}
           >
             {value}
           </div>
         </div>
       ))}
     </div>
+  );
+}
+
+function BarIndicator({ pct, color = "bg-f1-red" }: { pct: number; color?: string }) {
+  return (
+    <div className="mt-1 h-1 rounded-full bg-gray-200 overflow-hidden">
+      <div className={`h-full rounded-full ${color}`} style={{ width: `${Math.min(pct, 100)}%` }} />
+    </div>
+  );
+}
+
+function AdNoLink({ r }: { r: AdRow }) {
+  return (
+    <a
+      href={fbAdUrl(r.adId)}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="font-mono text-xs text-blue-500 hover:text-blue-700 hover:underline font-semibold"
+    >
+      {r.no}
+    </a>
   );
 }
 
@@ -64,21 +111,21 @@ function AdsTable({
 }) {
   if (rows.length === 0) {
     return (
-      <p className="text-[#8b949e] text-sm py-4 text-center">No data</p>
+      <p className="text-gray-400 text-sm py-4 text-center">No data</p>
     );
   }
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
+    <div className="overflow-x-auto rounded-lg border border-gray-200">
+      <table className="w-full text-sm bg-white">
         <thead>
-          <tr className="border-b border-[#30363d]">
-            <th className="text-left py-2 px-2 text-[11px] uppercase tracking-wider text-[#8b949e] w-6">
+          <tr className="bg-gray-50 border-b border-gray-200">
+            <th className="text-left py-2.5 px-3 text-[10px] uppercase tracking-[0.15em] font-bold text-gray-400 w-10">
               #
             </th>
             {columns.map((col) => (
               <th
                 key={col.header}
-                className={`text-left py-2 px-2 text-[11px] uppercase tracking-wider text-[#8b949e] ${col.className ?? ""}`}
+                className={`text-left py-2.5 px-3 text-[10px] uppercase tracking-[0.15em] font-bold text-gray-400 ${col.className ?? ""}`}
               >
                 {col.header}
               </th>
@@ -89,11 +136,20 @@ function AdsTable({
           {rows.map((row, i) => (
             <tr
               key={`${row.no}-${i}`}
-              className="border-b border-[#21262d] hover:bg-[#161b22] transition-colors"
+              className={`border-b border-gray-100 hover:bg-gray-50 transition-colors last:border-0 ${
+                i === 0 ? "border-l-[3px] border-l-f1-gold" :
+                i === 1 ? "border-l-[3px] border-l-f1-silver" :
+                i === 2 ? "border-l-[3px] border-l-f1-bronze" :
+                "border-l-[3px] border-l-transparent"
+              }`}
             >
-              <td className="py-2 px-2 text-[#8b949e]">{i + 1}</td>
+              <td className="py-2.5 px-3">
+                <span className={`font-mono text-base font-extrabold ${posColor(i)}`}>
+                  {i + 1}
+                </span>
+              </td>
               {columns.map((col) => (
-                <td key={col.header} className={`py-2 px-2 ${col.className ?? ""}`}>
+                <td key={col.header} className={`py-2.5 px-3 ${col.className ?? ""}`}>
                   {col.render(row, i)}
                 </td>
               ))}
@@ -108,40 +164,50 @@ function AdsTable({
 // ─── Top 10 tables ────────────────────────────────────────────────────────────
 
 function Top10BySpend({ rows }: { rows: AdRow[] }) {
+  const maxSpend = rows[0]?.spend || 1;
   const cols = [
     {
-      header: "No.",
-      render: (r: AdRow) => <span className="font-mono text-[#79c0ff]">{r.no}</span>,
+      header: "Ad No.",
+      render: (r: AdRow) => <AdNoLink r={r} />,
       className: "w-20",
     },
     {
       header: "Creative",
       render: (r: AdRow) => (
-        <span className="text-[#e6edf3] truncate block max-w-[240px]" title={r.creative}>
+        <span className="text-gray-800 font-medium truncate block max-w-[200px]" title={r.creative}>
           {r.creative}
         </span>
       ),
     },
     {
       header: "Spend",
-      render: (r: AdRow) => <span className="text-[#3fb950] font-semibold">{fmtRM(r.spend)}</span>,
-      className: "whitespace-nowrap",
-    },
-    {
-      header: "Leads",
-      render: (r: AdRow) => <span className="text-[#e6edf3]">{r.leads || "—"}</span>,
-    },
-    {
-      header: "CPL",
       render: (r: AdRow) => (
-        <span className="text-[#e6edf3]">{r.leads > 0 ? fmtRM(r.cpl) : "—"}</span>
+        <div>
+          <span className="text-f1-red font-bold">{fmtRM(r.spend)}</span>
+          <BarIndicator pct={(r.spend / maxSpend) * 100} />
+        </div>
       ),
       className: "whitespace-nowrap",
     },
     {
+      header: "Leads",
+      render: (r: AdRow) => <span className="text-gray-600 font-medium">{r.leads || "—"}</span>,
+    },
+    {
+      header: "CPL",
+      render: (r: AdRow) => (
+        <span className="text-gray-600">{r.leads > 0 ? fmtRM(r.cpl) : "—"}</span>
+      ),
+      className: "whitespace-nowrap",
+    },
+    {
+      header: "Purchases",
+      render: (r: AdRow) => <span className="text-gray-600">{r.purchases || "—"}</span>,
+    },
+    {
       header: "ROAS",
       render: (r: AdRow) => (
-        <span className="text-[#e6edf3]">{r.roas > 0 ? fmtRoas(r.roas) : "—"}</span>
+        <span className="text-gray-600">{r.roas > 0 ? fmtRoas(r.roas) : "—"}</span>
       ),
     },
   ];
@@ -149,75 +215,100 @@ function Top10BySpend({ rows }: { rows: AdRow[] }) {
 }
 
 function Top10ByLeads({ rows }: { rows: AdRow[] }) {
+  const maxLeads = rows[0]?.leads || 1;
   const cols = [
     {
-      header: "No.",
-      render: (r: AdRow) => <span className="font-mono text-[#79c0ff]">{r.no}</span>,
+      header: "Ad No.",
+      render: (r: AdRow) => <AdNoLink r={r} />,
       className: "w-20",
     },
     {
       header: "Creative",
       render: (r: AdRow) => (
-        <span className="text-[#e6edf3] truncate block max-w-[240px]" title={r.creative}>
+        <span className="text-gray-800 font-medium truncate block max-w-[200px]" title={r.creative}>
           {r.creative}
         </span>
       ),
     },
     {
       header: "Leads",
-      render: (r: AdRow) => <span className="text-[#3fb950] font-semibold">{fmtNum(r.leads)}</span>,
+      render: (r: AdRow) => (
+        <div>
+          <span className="text-amber-500 font-bold">{fmtNum(r.leads)}</span>
+          <BarIndicator pct={(r.leads / maxLeads) * 100} color="bg-amber-400" />
+        </div>
+      ),
     },
     {
       header: "Spend",
-      render: (r: AdRow) => <span className="text-[#e6edf3]">{fmtRM(r.spend)}</span>,
+      render: (r: AdRow) => <span className="text-gray-600">{fmtRM(r.spend)}</span>,
       className: "whitespace-nowrap",
     },
     {
       header: "CPL",
       render: (r: AdRow) => (
-        <span className="text-[#e6edf3]">{r.leads > 0 ? fmtRM(r.cpl) : "—"}</span>
+        <span className="text-gray-600">{r.leads > 0 ? fmtRM(r.cpl) : "—"}</span>
       ),
       className: "whitespace-nowrap",
     },
     {
-      header: "CTR",
-      render: (r: AdRow) => <span className="text-[#e6edf3]">{fmtPct(r.ctr)}</span>,
+      header: "Purchases",
+      render: (r: AdRow) => <span className="text-gray-600">{r.purchases || "—"}</span>,
+    },
+    {
+      header: "ROAS",
+      render: (r: AdRow) => (
+        <span className="text-gray-600">{r.roas > 0 ? fmtRoas(r.roas) : "—"}</span>
+      ),
     },
   ];
   return <AdsTable rows={rows} columns={cols} />;
 }
 
 function Top10ByRoas({ rows }: { rows: AdRow[] }) {
+  const maxRoas = rows[0]?.roas || 1;
   const cols = [
     {
-      header: "No.",
-      render: (r: AdRow) => <span className="font-mono text-[#79c0ff]">{r.no}</span>,
+      header: "Ad No.",
+      render: (r: AdRow) => <AdNoLink r={r} />,
       className: "w-20",
     },
     {
       header: "Creative",
       render: (r: AdRow) => (
-        <span className="text-[#e6edf3] truncate block max-w-[240px]" title={r.creative}>
+        <span className="text-gray-800 font-medium truncate block max-w-[200px]" title={r.creative}>
           {r.creative}
         </span>
       ),
     },
     {
       header: "ROAS",
-      render: (r: AdRow) => <span className="text-[#3fb950] font-semibold">{fmtRoas(r.roas)}</span>,
-    },
-    {
-      header: "Purchases",
-      render: (r: AdRow) => <span className="text-[#e6edf3]">{fmtNum(r.purchases)}</span>,
-    },
-    {
-      header: "Spend",
-      render: (r: AdRow) => <span className="text-[#e6edf3]">{fmtRM(r.spend)}</span>,
-      className: "whitespace-nowrap",
+      render: (r: AdRow) => (
+        <div>
+          <span className="text-emerald-600 font-bold">{fmtRoas(r.roas)}</span>
+          <BarIndicator pct={(r.roas / maxRoas) * 100} color="bg-emerald-500" />
+        </div>
+      ),
     },
     {
       header: "Leads",
-      render: (r: AdRow) => <span className="text-[#e6edf3]">{r.leads || "—"}</span>,
+      render: (r: AdRow) => <span className="text-gray-600">{r.leads || "—"}</span>,
+    },
+    {
+      header: "CPL",
+      render: (r: AdRow) => (
+        <span className="text-gray-600">{r.leads > 0 ? fmtRM(r.cpl) : "—"}</span>
+      ),
+      className: "whitespace-nowrap",
+    },
+    {
+      header: "Purchases",
+      render: (r: AdRow) => <span className="text-gray-600 font-medium">{fmtNum(r.purchases)}</span>,
+    },
+    {
+      header: "Spend",
+      render: (r: AdRow) => <span className="text-gray-600">{fmtRM(r.spend)}</span>,
+      className: "whitespace-nowrap",
     },
   ];
   return <AdsTable rows={rows} columns={cols} />;
@@ -255,36 +346,43 @@ export default function MetaAdsReport() {
   }, [fetchData]);
 
   return (
-    <div className="min-h-screen bg-[#0d1117] text-[#e6edf3] px-4 py-8">
-      <div className="max-w-6xl mx-auto space-y-8">
+    <div className="min-h-screen bg-f1-surface text-[#e6edf3] px-4 py-8">
+      <div className="max-w-6xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
-            <h2 className="text-xl font-bold text-[#e6edf3]">Meta Ads Performance</h2>
-            <p className="text-[#8b949e] text-sm mt-0.5">AIA Ads Acc · All-time + Last Webinar</p>
+            <h2 className="text-2xl font-extrabold uppercase tracking-wider text-white">
+              Meta Ads Performance
+            </h2>
+            <p className="text-f1-red text-sm font-semibold uppercase tracking-widest mt-0.5">
+              AIA Ads Acc · All-time + Last Webinar
+            </p>
           </div>
           <div className="flex items-center gap-3">
             {lastFetched && (
-              <span className="text-[#8b949e] text-xs">Updated {lastFetched}</span>
+              <span className="text-gray-600 text-xs font-mono">Updated {lastFetched}</span>
             )}
             <button
               onClick={fetchData}
               disabled={loading}
-              className="px-3 py-1.5 text-sm bg-[#21262d] border border-[#30363d] rounded-md hover:bg-[#30363d] transition-colors disabled:opacity-50"
+              className="px-4 py-1.5 text-xs font-bold uppercase tracking-wider bg-f1-red/10 border border-f1-red/30 text-f1-red rounded-md hover:bg-f1-red/20 transition-colors disabled:opacity-50"
             >
               {loading ? "Loading…" : "Refresh"}
             </button>
           </div>
         </div>
 
+        {/* Racing stripe accent */}
+        <div className="h-[2px] bg-gradient-to-r from-f1-red via-f1-red/40 to-transparent" />
+
         {/* Error state */}
         {error && !loading && (
-          <div className="card border-[#f85149]/40 bg-[#1a0000] p-4">
-            <p className="text-[#f85149] font-semibold text-sm">Failed to load Meta Ads data</p>
-            <p className="text-[#8b949e] text-sm mt-1">{error}</p>
+          <div className="f1-card border-f1-red/40 bg-f1-red/5 p-4">
+            <p className="text-f1-red font-bold text-sm uppercase tracking-wider">Failed to load Meta Ads data</p>
+            <p className="text-gray-500 text-sm mt-1">{error}</p>
             <button
               onClick={fetchData}
-              className="mt-3 px-3 py-1.5 text-sm bg-[#21262d] border border-[#30363d] rounded-md hover:bg-[#30363d] transition-colors"
+              className="mt-3 px-4 py-1.5 text-xs font-bold uppercase tracking-wider bg-f1-red/10 border border-f1-red/30 text-f1-red rounded-md hover:bg-f1-red/20 transition-colors"
             >
               Retry
             </button>
@@ -295,11 +393,11 @@ export default function MetaAdsReport() {
         {loading && !data && (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="card p-4 animate-pulse">
-                <div className="h-4 bg-[#21262d] rounded w-1/3 mb-3" />
+              <div key={i} className="f1-card p-4 animate-pulse">
+                <div className="h-4 bg-f1-red/10 rounded w-1/3 mb-3" />
                 <div className="grid grid-cols-4 gap-3">
                   {[1, 2, 3, 4].map((j) => (
-                    <div key={j} className="h-16 bg-[#21262d] rounded" />
+                    <div key={j} className="h-16 bg-f1-carbon rounded" />
                   ))}
                 </div>
               </div>
@@ -313,15 +411,16 @@ export default function MetaAdsReport() {
             {/* ── Last Webinar ── */}
             <div className="space-y-4">
               <div className="flex items-center gap-3">
-                <div className="h-px flex-1 bg-[#30363d]" />
-                <span className="text-sm font-semibold text-[#8b949e] whitespace-nowrap">
-                  📅 Last Webinar — {data.lastWebinar.label}
+                <div className="f1-divider" />
+                <span className="w-2 h-2 rounded-full bg-f1-red inline-block animate-pulse" />
+                <span className="text-xs font-bold uppercase tracking-[0.2em] text-f1-red whitespace-nowrap">
+                  Last Webinar — {data.lastWebinar.label}
                 </span>
-                <div className="h-px flex-1 bg-[#30363d]" />
+                <div className="f1-divider" />
               </div>
 
               {/* Webinar summary stats */}
-              <div className="card p-5">
+              <div className="f1-card p-5">
                 <SectionHeader>Webinar Period Summary</SectionHeader>
                 <StatGrid
                   items={[
@@ -334,22 +433,22 @@ export default function MetaAdsReport() {
               </div>
 
               {/* Webinar Top 10 by Spend */}
-              <div className="card p-5">
-                <SectionHeader>Top 10 Ads on Last Webinar by Spend</SectionHeader>
+              <div className="f1-card p-5">
+                <SectionHeader>Top 10 Ads · Last Webinar · By Spend</SectionHeader>
                 <Top10BySpend rows={data.lastWebinar.topBySpend} />
               </div>
 
               {/* Webinar Top 10 by Leads */}
-              <div className="card p-5">
-                <SectionHeader>Top 10 Ads on Last Webinar by Leads</SectionHeader>
+              <div className="f1-card p-5">
+                <SectionHeader>Top 10 Ads · Last Webinar · By Leads</SectionHeader>
                 <Top10ByLeads rows={data.lastWebinar.topByLeads} />
               </div>
 
               {/* Webinar Top 10 by ROAS */}
-              <div className="card p-5">
-                <SectionHeader>Top 10 Ads on Last Webinar by ROAS</SectionHeader>
+              <div className="f1-card p-5">
+                <SectionHeader>Top 10 Ads · Last Webinar · By ROAS</SectionHeader>
                 {data.lastWebinar.topByRoas.length === 0 ? (
-                  <p className="text-[#8b949e] text-sm">No purchase data for this period</p>
+                  <p className="text-gray-600 text-sm">No purchase data for this period</p>
                 ) : (
                   <Top10ByRoas rows={data.lastWebinar.topByRoas} />
                 )}
@@ -357,8 +456,8 @@ export default function MetaAdsReport() {
             </div>
 
             {/* ── Account Summary (All Time) ── */}
-            <div className="card p-5">
-              <SectionHeader>📊 Account Summary (All Time)</SectionHeader>
+            <div className="f1-card p-5">
+              <SectionHeader>Account Summary · All Time</SectionHeader>
               <StatGrid
                 items={[
                   { label: "Total Spend", value: fmtRM(data.accountSummary.totalSpend), highlight: true },
@@ -374,22 +473,22 @@ export default function MetaAdsReport() {
             </div>
 
             {/* ── Top 10 by Spend ── */}
-            <div className="card p-5">
-              <SectionHeader>🏆 Top 10 Ads by Spend</SectionHeader>
+            <div className="f1-card p-5">
+              <SectionHeader>Top 10 Ads by Spend</SectionHeader>
               <Top10BySpend rows={data.topBySpend} />
             </div>
 
             {/* ── Top 10 by Leads ── */}
-            <div className="card p-5">
-              <SectionHeader>🎯 Top 10 Ads by Leads</SectionHeader>
+            <div className="f1-card p-5">
+              <SectionHeader>Top 10 Ads by Leads</SectionHeader>
               <Top10ByLeads rows={data.topByLeads} />
             </div>
 
             {/* ── Top 10 by ROAS ── */}
-            <div className="card p-5">
-              <SectionHeader>💰 Top 10 Ads by ROAS</SectionHeader>
+            <div className="f1-card p-5">
+              <SectionHeader>Top 10 Ads by ROAS</SectionHeader>
               {data.topByRoas.length === 0 ? (
-                <p className="text-[#8b949e] text-sm">No purchase data available</p>
+                <p className="text-gray-600 text-sm">No purchase data available</p>
               ) : (
                 <Top10ByRoas rows={data.topByRoas} />
               )}

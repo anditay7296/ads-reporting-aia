@@ -170,6 +170,7 @@ function groupByNo(rows: RawInsightRow[]): AdRow[] {
 
     result.push({
       no,
+      adId: rep.id,
       creative: creative.slice(0, 60),
       adType,
       spend,
