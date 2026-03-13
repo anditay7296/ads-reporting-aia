@@ -18,9 +18,21 @@ function fmtRoas(n: number) {
   return n.toFixed(2);
 }
 
-// ─── Facebook Ads Manager link ────────────────────────────────────────────────
+// ─── Facebook post / Ads Manager link ─────────────────────────────────────────
 
-function fbAdUrl(adId: string) {
+/**
+ * If the ad has an effective_object_story_id (PAGE_ID_POST_ID), link directly
+ * to the Facebook post. Otherwise fall back to Ads Manager.
+ */
+function fbAdUrl(adId: string, storyId?: string): string {
+  if (storyId) {
+    const sep = storyId.indexOf("_");
+    if (sep !== -1) {
+      const pageId = storyId.slice(0, sep);
+      const postId = storyId.slice(sep + 1);
+      return `https://www.facebook.com/permalink.php?story_fbid=${postId}&id=${pageId}`;
+    }
+  }
   return `https://www.facebook.com/adsmanager/manage/ads?act=555700366717773&selected_ad_ids=${adId}`;
 }
 
@@ -105,11 +117,14 @@ function BarIndicator({ pct, color = "bg-f1-red" }: { pct: number; color?: strin
 }
 
 function AdNoLink({ r }: { r: AdRow }) {
+  const url = fbAdUrl(r.adId, r.storyId);
+  const isPost = url.includes("permalink.php");
   return (
     <a
-      href={fbAdUrl(r.adId)}
+      href={url}
       target="_blank"
       rel="noopener noreferrer"
+      title={isPost ? "Open Facebook post ↗" : "Open in Ads Manager ↗"}
       className="font-mono text-xs text-blue-600 hover:text-blue-800 hover:underline font-bold"
     >
       {r.no}

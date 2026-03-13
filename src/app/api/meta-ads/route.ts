@@ -90,9 +90,49 @@ async function fetchInsights(
   return rows;
 }
 
+// ─── Batch-fetch effective_object_story_id for real post URLs ─────────────────
+
+async function fetchStoryIds(adIds: string[]): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  if (!adIds.length) return map;
+
+  // Process in parallel chunks of 50 (safe URL length)
+  const chunks: string[][] = [];
+  for (let i = 0; i < adIds.length; i += 50) {
+    chunks.push(adIds.slice(i, i + 50));
+  }
+
+  await Promise.all(
+    chunks.map(async (chunk) => {
+      const url =
+        `${META_BASE}/?ids=${chunk.join(",")}&fields=effective_object_story_id` +
+        `&access_token=${META_TOKEN}`;
+      try {
+        const res = await fetch(url, {
+          next: { revalidate: 1800 },
+          signal: AbortSignal.timeout(8000),
+        });
+        if (!res.ok) return;
+        const json = await res.json();
+        for (const [id, val] of Object.entries(
+          json as Record<string, { effective_object_story_id?: string }>,
+        )) {
+          if (val?.effective_object_story_id) {
+            map.set(id, val.effective_object_story_id);
+          }
+        }
+      } catch {
+        // non-fatal — fall back to Ads Manager link
+      }
+    }),
+  );
+
+  return map;
+}
+
 // ─── Group by ad No. (mirrors Python group_by_no) ────────────────────────────
 
-function groupByNo(rows: RawInsightRow[]): AdRow[] {
+function groupByNo(rows: RawInsightRow[], storyMap: Map<string, string>): AdRow[] {
   const buckets = new Map<
     string,
     {
@@ -171,6 +211,7 @@ function groupByNo(rows: RawInsightRow[]): AdRow[] {
     result.push({
       no,
       adId: rep.id,
+      storyId: storyMap.get(rep.id),
       creative: creative.slice(0, 60),
       adType,
       spend,
@@ -250,8 +291,14 @@ export async function GET() {
       25,
     );
 
-    const alltime = groupByNo(alltimeRows);
-    const webinar = groupByNo(webinarRows);
+    // Batch-fetch real Facebook post URLs for all unique ad IDs
+    const allAdIds = [
+      ...new Set([...alltimeRows, ...webinarRows].map((r) => r.ad_id)),
+    ];
+    const storyMap = await fetchStoryIds(allAdIds);
+
+    const alltime = groupByNo(alltimeRows, storyMap);
+    const webinar = groupByNo(webinarRows, storyMap);
 
     const totalSpend = alltime.reduce((s, r) => s + r.spend, 0);
     const totalLeads = alltime.reduce((s, r) => s + r.leads, 0);

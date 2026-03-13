@@ -1,6 +1,7 @@
 export interface AdRow {
   no: string;
   adId: string;
+  storyId?: string;   // effective_object_story_id → real Facebook post URL
   creative: string;
   adType: string;
   spend: number;
