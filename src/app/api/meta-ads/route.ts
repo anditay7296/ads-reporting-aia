@@ -9,8 +9,8 @@ const META_BASE = "https://graph.facebook.com/v21.0";
 export const dynamic = "force-dynamic"; // skip build-time pre-rendering
 
 // ─── Server-side in-memory cache ─────────────────────────────────────────────
-// Persists within a Vercel function instance. Serves stale data on API failure.
-let _serverCache: { data: MetaAdsData; cachedAt: number } | null = null;
+// Keyed by webinar period — only re-fetches when the period changes.
+let _serverCache: { data: MetaAdsData; cachedAt: number; periodKey: string } | null = null;
 
 // ─── Raw API types ────────────────────────────────────────────────────────────
 
@@ -63,22 +63,39 @@ async function fetchInsights(
       "ad_id,ad_name,impressions,clicks,spend,ctr,cpc,reach,video_thruplay_watched_actions,actions,purchase_roas",
     level: "ad",
     limit: "500",
+    time_increment: "all_days", // aggregate all days per ad — avoids daily row explosion
     access_token: META_TOKEN!,
     ...params,
   });
 
   const rows: RawInsightRow[] = [];
-  let nextUrl: string = `${META_BASE}/${AD_ACCOUNT}/insights?${baseParams}`;
+  let after: string | undefined;
   let pages = 0;
-  let hasMore = true;
 
-  while (hasMore && pages < maxPages) {
-    const res: Response = await fetch(nextUrl, {
-      next: { revalidate: 1800 },
-      signal: AbortSignal.timeout(8000), // 8s per page
-    });
-    if (!res.ok) {
-      console.warn(`Meta Ads insights error: ${res.status}`);
+  while (pages < maxPages) {
+    const pageParams = new URLSearchParams(baseParams);
+    if (after) pageParams.set("after", after);
+
+    const url = `${META_BASE}/${AD_ACCOUNT}/insights?${pageParams}`;
+
+    // Retry with backoff on rate-limit (403 / code 4)
+    let res: Response | null = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      res = await fetch(url, {
+        cache: "no-store",
+        signal: AbortSignal.timeout(30000),
+      });
+      if (res.status === 403) {
+        const wait = (attempt + 1) * 10000; // 10s, 20s, 30s
+        console.warn(`Meta Ads rate-limited (page ${pages + 1}), retrying in ${wait / 1000}s…`);
+        await new Promise((r) => setTimeout(r, wait));
+        continue;
+      }
+      break;
+    }
+    if (!res || !res.ok) {
+      const errBody = res ? await res.text().catch(() => "") : "";
+      console.warn(`Meta Ads insights error (page ${pages + 1}): ${res?.status}`, errBody.slice(0, 500));
       break;
     }
     const json = await res.json();
@@ -86,16 +103,20 @@ async function fetchInsights(
       console.warn("Meta Ads API error:", json.error.message);
       break;
     }
-    rows.push(...(json.data ?? []));
-    const next: string | undefined = json.paging?.next;
-    if (next) {
-      nextUrl = next;
+    const data = json.data ?? [];
+    rows.push(...data);
+
+    // Use cursor-based pagination instead of following paging.next URL
+    const nextCursor: string | undefined = json.paging?.cursors?.after;
+    if (nextCursor && data.length > 0) {
+      after = nextCursor;
     } else {
-      hasMore = false;
+      break;
     }
     pages++;
   }
 
+  console.log(`Meta Ads: fetched ${rows.length} rows across ${pages + 1} pages (maxPages=${maxPages})`);
   return rows;
 }
 
@@ -120,8 +141,8 @@ async function fetchStoryIds(adIds: string[]): Promise<Map<string, string>> {
         `&access_token=${META_TOKEN}`;
       try {
         const res = await fetch(url, {
-          next: { revalidate: 1800 },
-          signal: AbortSignal.timeout(8000),
+          cache: "no-store",
+          signal: AbortSignal.timeout(30000),
         });
         if (!res.ok) return;
         const json = await res.json();
@@ -295,15 +316,30 @@ export async function GET() {
 
   try {
     const { since, until } = getLastWebinarPeriod();
+    const periodKey = `${since}_${until}`;
 
-    // Fetch all-time with high page cap (50 pages = 25,000 ads) to capture full spend
-    const alltimeRows = await fetchInsights({ date_preset: "maximum" }, 50);
+    // Return cached data if the webinar period hasn't changed
+    if (_serverCache && _serverCache.periodKey === periodKey) {
+      console.log("Meta Ads: serving cached data for period", periodKey);
+      return NextResponse.json(_serverCache.data, {
+        headers: {
+          "Cache-Control": "s-maxage=86400, stale-while-revalidate",
+          "X-Cache": "HIT",
+          "X-Cached-At": new Date(_serverCache.cachedAt).toISOString(),
+        },
+      });
+    }
+
+    console.log("Meta Ads: fetching fresh data for new period", periodKey);
+
+    // Fetch all-time with high page cap (100 pages = 50,000 ads) to capture full spend
+    const alltimeRows = await fetchInsights({ date_preset: "maximum" }, 100);
     const webinarRows = await fetchInsights(
       { time_range: JSON.stringify({ since, until }) },
       25,
     );
 
-    // Exclude AI 小白创业 page ads — not tracked here
+    // Exclude AI 小白创业 page ads from rankings only (not from summary totals)
     const filteredAlltimeRows = alltimeRows.filter((r) => !isExcludedPage(r.ad_name));
     const filteredWebinarRows = webinarRows.filter((r) => !isExcludedPage(r.ad_name));
 
@@ -313,21 +349,26 @@ export async function GET() {
     );
     const storyMap = await fetchStoryIds(allAdIds);
 
+    // All ads (incl. 小白创业) for summary totals
+    const alltimeAll = groupByNo(alltimeRows, storyMap);
+    // Filtered ads (excl. 小白创业) for ranking tables
     const alltime = groupByNo(filteredAlltimeRows, storyMap);
     const webinar = groupByNo(filteredWebinarRows, storyMap);
 
-    const totalSpend = alltime.reduce((s, r) => s + r.spend, 0);
-    const totalLeads = alltime.reduce((s, r) => s + r.leads, 0);
-    const totalImpressions = alltime.reduce((s, r) => s + r.impressions, 0);
-    const totalClicks = alltime.reduce((s, r) => s + r.clicks, 0);
-    const totalReach = alltime.reduce((s, r) => s + r.reach, 0);
-    const totalPurchases = alltime.reduce((s, r) => s + r.purchases, 0);
-    const roasAds = alltime.filter((r) => r.purchases > 0 && r.roas > 0);
+    // Summary uses ALL ads for accurate totals
+    const totalSpend = alltimeAll.reduce((s, r) => s + r.spend, 0);
+    const totalLeads = alltimeAll.reduce((s, r) => s + r.leads, 0);
+    const totalImpressions = alltimeAll.reduce((s, r) => s + r.impressions, 0);
+    const totalClicks = alltimeAll.reduce((s, r) => s + r.clicks, 0);
+    const totalReach = alltimeAll.reduce((s, r) => s + r.reach, 0);
+    const totalPurchases = alltimeAll.reduce((s, r) => s + r.purchases, 0);
+    const roasAds = alltimeAll.filter((r) => r.purchases > 0 && r.roas > 0);
     const avgRoas =
       roasAds.length > 0
         ? roasAds.reduce((s, r) => s + r.roas, 0) / roasAds.length
         : 0;
 
+    // Rankings use filtered ads (excl. 小白创业)
     const topBySpend = [...alltime].sort((a, b) => b.spend - a.spend);
     const topByLeads = [...alltime].sort((a, b) => b.leads - a.leads);
     const topByPurchasesAll = alltime.filter((r) => r.purchases > 0);
@@ -368,12 +409,12 @@ export async function GET() {
       },
     };
 
-    // Save to server-side cache before returning
-    _serverCache = { data, cachedAt: Date.now() };
+    // Save to server-side cache keyed by webinar period
+    _serverCache = { data, cachedAt: Date.now(), periodKey };
 
     return NextResponse.json(data, {
       headers: {
-        "Cache-Control": "s-maxage=1800, stale-while-revalidate",
+        "Cache-Control": "s-maxage=86400, stale-while-revalidate",
       },
     });
   } catch (err) {
